@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { runRecurring } from "@/lib/recurring.functions";
+import { useEffect } from "react";
 
 export type TableName =
   | "accounts"
@@ -98,6 +101,29 @@ export async function insertRows(table: TableName, rows: Row[]) {
   if (error) throw error;
 }
 
+/** Materializa recorrências ativas em contas pendentes até o fim do mês atual. */
+export function useGenerateRecurring() {
+  const qc = useQueryClient();
+  const fn = useServerFn(runRecurring);
+  return useMutation({
+    mutationFn: async () => await fn(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+    },
+  });
+}
+
+/** Executa a geração de recorrências uma vez ao montar (silencioso). */
+export function useAutoGenerateRecurring() {
+  const gen = useGenerateRecurring();
+  useEffect(() => {
+    gen.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
 export interface TransactionRow {
   id: string;
   type: "receita" | "despesa";
@@ -134,6 +160,7 @@ export interface CategoryRow {
   color: string;
   icon: string;
   type: "receita" | "despesa" | "ambos";
+  parent_id: string | null;
 }
 
 export interface GoalRow {

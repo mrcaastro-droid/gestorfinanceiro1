@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTheme } from "@/lib/theme";
+import { useList, type CategoryRow } from "@/lib/finance";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -72,13 +73,7 @@ function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="categorias">
-          <SimpleCrud embedded table="categories" title="Categorias" singular="Categoria" icon={Tag}
-            fields={[
-              { name: "name", label: "Nome" },
-              { name: "type", label: "Tipo", type: "select", default: "ambos", options: [{ value: "receita", label: "Receita" }, { value: "despesa", label: "Despesa" }, { value: "ambos", label: "Ambos" }] },
-              { name: "color", label: "Cor", type: "color", default: "#10b981" },
-              { name: "icon", label: "Ícone (nome lucide)", default: "tag" },
-            ]} />
+          <CategoriesManager />
         </TabsContent>
         <TabsContent value="bancos">
           <SimpleCrud embedded table="banks" title="Bancos" singular="Banco" icon={Landmark}
@@ -117,5 +112,40 @@ function SettingsPage() {
         </TabsContent>
       </Tabs>
     </PageContainer>
+  );
+}
+
+function CategoriesManager() {
+  const { data: categories } = useList<CategoryRow>("categories");
+  const nameById = new Map((categories ?? []).map((c) => [c.id, c.name]));
+  const parents = (categories ?? []).filter((c) => !c.parent_id);
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Crie categorias principais (ex.: "Gastos fixos") e vincule subcategorias (ex.: "Aluguel", "Energia") escolhendo uma categoria pai. Assim você mede quanto gasta em cada subcategoria.
+      </p>
+      <SimpleCrud
+        embedded
+        table="categories"
+        title="Categorias"
+        singular="Categoria"
+        icon={Tag}
+        fields={[
+          { name: "name", label: "Nome" },
+          { name: "type", label: "Tipo", type: "select", default: "ambos", options: [{ value: "receita", label: "Receita" }, { value: "despesa", label: "Despesa" }, { value: "ambos", label: "Ambos" }] },
+          { name: "parent_id", label: "Categoria pai (opcional)", type: "select", optional: true, options: parents.map((p) => ({ value: p.id, label: p.name })) },
+          { name: "color", label: "Cor", type: "color", default: "#10b981" },
+          { name: "icon", label: "Ícone (nome lucide)", default: "tag" },
+        ]}
+        renderItem={(row) => (
+          <div>
+            <p className="text-sm font-medium truncate">{String(row.name)}</p>
+            <p className="text-xs text-muted-foreground">
+              {row.parent_id ? `Subcategoria de ${nameById.get(String(row.parent_id)) ?? "—"}` : "Categoria principal"}
+            </p>
+          </div>
+        )}
+      />
+    </div>
   );
 }

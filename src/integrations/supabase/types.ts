@@ -157,6 +157,7 @@ export type Database = {
           icon: string
           id: string
           name: string
+          parent_id: string | null
           type: Database["public"]["Enums"]["category_type"]
           updated_at: string
           user_id: string
@@ -167,6 +168,7 @@ export type Database = {
           icon?: string
           id?: string
           name: string
+          parent_id?: string | null
           type?: Database["public"]["Enums"]["category_type"]
           updated_at?: string
           user_id?: string
@@ -177,11 +179,20 @@ export type Database = {
           icon?: string
           id?: string
           name?: string
+          parent_id?: string | null
           type?: Database["public"]["Enums"]["category_type"]
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dividends: {
         Row: {
@@ -650,6 +661,7 @@ export type Database = {
           notes: string | null
           payment_method_id: string | null
           person_id: string | null
+          recurring_rule_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
           user_id: string
@@ -670,6 +682,7 @@ export type Database = {
           notes?: string | null
           payment_method_id?: string | null
           person_id?: string | null
+          recurring_rule_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id?: string
@@ -690,6 +703,7 @@ export type Database = {
           notes?: string | null
           payment_method_id?: string | null
           person_id?: string | null
+          recurring_rule_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id?: string
@@ -728,6 +742,13 @@ export type Database = {
             columns: ["person_id"]
             isOneToOne: false
             referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_recurring_rule_id_fkey"
+            columns: ["recurring_rule_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_rules"
             referencedColumns: ["id"]
           },
         ]
