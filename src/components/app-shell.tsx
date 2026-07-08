@@ -4,7 +4,6 @@ import { navItems, bottomNavItems } from "./nav-items";
 import { useAuth, signOut } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { initials } from "@/lib/format";
 import { Wallet, Menu, Moon, Sun, LogOut, MoreHorizontal } from "lucide-react";
@@ -53,7 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     : "text-muted-foreground hover:text-foreground hover:bg-accent",
                 )}
               >
-                <item.icon className="size-4.5 shrink-0" />
+                <item.icon className="size-[18px] shrink-0" />
                 {item.title}
               </Link>
             ))}
@@ -187,7 +186,3 @@ export function PageHeader({
 export function PageContainer({ children }: { children: ReactNode }) {
   return <div className="p-4 md:p-8 max-w-7xl mx-auto">{children}</div>;
 }
-
-// re-export to satisfy unused import lint safety
-export const _supabase = supabase;
-export type { ReactNode as _RN } from "react";
