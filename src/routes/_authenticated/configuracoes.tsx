@@ -73,13 +73,7 @@ function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="categorias">
-          <SimpleCrud embedded table="categories" title="Categorias" singular="Categoria" icon={Tag}
-            fields={[
-              { name: "name", label: "Nome" },
-              { name: "type", label: "Tipo", type: "select", default: "ambos", options: [{ value: "receita", label: "Receita" }, { value: "despesa", label: "Despesa" }, { value: "ambos", label: "Ambos" }] },
-              { name: "color", label: "Cor", type: "color", default: "#10b981" },
-              { name: "icon", label: "Ícone (nome lucide)", default: "tag" },
-            ]} />
+          <CategoriesManager />
         </TabsContent>
         <TabsContent value="bancos">
           <SimpleCrud embedded table="banks" title="Bancos" singular="Banco" icon={Landmark}
