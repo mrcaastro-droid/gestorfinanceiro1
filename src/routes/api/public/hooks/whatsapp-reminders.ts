@@ -43,8 +43,11 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-reminders")({
     handlers: {
       POST: async ({ request }) => {
         const url = new URL(request.url);
-        const token = url.searchParams.get("token") ?? request.headers.get("apikey");
-        if (token !== process.env.WHATSAPP_WEBHOOK_TOKEN) {
+        const apikey = request.headers.get("apikey");
+        const token = url.searchParams.get("token");
+        const okAnon = !!apikey && apikey === process.env.SUPABASE_PUBLISHABLE_KEY;
+        const okToken = !!token && token === process.env.WHATSAPP_WEBHOOK_TOKEN;
+        if (!okAnon && !okToken) {
           return new Response("Forbidden", { status: 403 });
         }
 
