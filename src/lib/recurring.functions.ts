@@ -63,34 +63,42 @@ export const runRecurring = createServerFn({ method: "POST" })
 
     let created = 0;
     for (const rule of rules ?? []) {
-      const dates = occurrences(
+      const allDates = occurrences(
         rule.next_run as string,
         (rule.frequency as Freq) ?? "mensal",
         Number(rule.day_of_month ?? 1),
         horizon,
       );
-      if (dates.length === 0) continue;
+      if (allDates.length === 0) continue;
 
-      const rows = dates.map((date) => ({
-        user_id: userId,
-        type: rule.type,
-        amount: rule.amount,
-        date,
-        description: rule.name,
-        category_id: rule.category_id,
-        account_id: rule.account_id,
-        is_paid: false,
-        recurring_rule_id: rule.id,
-      }));
-
-      const { error: insErr, count } = await supabase
+      // Evita duplicidade: busca as datas já geradas para esta regra
+      const { data: existing, error: exErr } = await supabase
         .from("transactions")
-        .upsert(rows as never, { onConflict: "recurring_rule_id,date", ignoreDuplicates: true, count: "exact" });
-      if (insErr) throw insErr;
-      created += count ?? 0;
+        .select("date")
+        .eq("recurring_rule_id", rule.id);
+      if (exErr) throw exErr;
+      const existingSet = new Set((existing ?? []).map((e) => e.date as string));
+      const dates = allDates.filter((d) => !existingSet.has(d));
 
-      // Avança next_run para logo após a última ocorrência gerada
-      const lastGenerated = new Date(dates[dates.length - 1] + "T00:00:00");
+      if (dates.length > 0) {
+        const rows = dates.map((date) => ({
+          user_id: userId,
+          type: rule.type,
+          amount: rule.amount,
+          date,
+          description: rule.name,
+          category_id: rule.category_id,
+          account_id: rule.account_id,
+          is_paid: false,
+          recurring_rule_id: rule.id,
+        }));
+        const { error: insErr } = await supabase.from("transactions").insert(rows as never);
+        if (insErr) throw insErr;
+        created += dates.length;
+      }
+
+      // Avança next_run para logo após a última ocorrência prevista
+      const lastGenerated = new Date(allDates[allDates.length - 1] + "T00:00:00");
       let next: Date;
       if (rule.frequency === "semanal") {
         next = new Date(lastGenerated.getFullYear(), lastGenerated.getMonth(), lastGenerated.getDate() + 7);
