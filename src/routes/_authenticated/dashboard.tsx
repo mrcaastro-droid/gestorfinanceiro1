@@ -26,7 +26,7 @@ import {
   Target,
 } from "lucide-react";
 import { PageContainer, PageHeader } from "@/components/app-shell";
-import { useList, type TransactionRow, type AccountRow, type CategoryRow, type GoalRow, type InvestmentRow } from "@/lib/finance";
+import { useList, useAutoGenerateRecurring, type TransactionRow, type AccountRow, type CategoryRow, type GoalRow, type InvestmentRow } from "@/lib/finance";
 import { formatCurrency, formatDateShort } from "@/lib/format";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +38,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 function Dashboard() {
+  useAutoGenerateRecurring();
   const { data: transactions, isLoading } = useList<TransactionRow>("transactions", { orderBy: "date" });
   const { data: accounts } = useList<AccountRow>("accounts");
   const { data: categories } = useList<CategoryRow>("categories");
