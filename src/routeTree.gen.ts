@@ -13,9 +13,17 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedTransferenciasRouteImport } from './routes/_authenticated/transferencias'
+import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
+import { Route as AuthenticatedRecorrenciasRouteImport } from './routes/_authenticated/recorrencias'
 import { Route as AuthenticatedReceitasRouteImport } from './routes/_authenticated/receitas'
+import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
+import { Route as AuthenticatedInvestimentosRouteImport } from './routes/_authenticated/investimentos'
 import { Route as AuthenticatedDespesasRouteImport } from './routes/_authenticated/despesas'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
+import { Route as AuthenticatedCartoesRouteImport } from './routes/_authenticated/cartoes'
+import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -36,11 +44,39 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTransferenciasRoute =
+  AuthenticatedTransferenciasRouteImport.update({
+    id: '/transferencias',
+    path: '/transferencias',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRecorrenciasRoute =
+  AuthenticatedRecorrenciasRouteImport.update({
+    id: '/recorrencias',
+    path: '/recorrencias',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReceitasRoute = AuthenticatedReceitasRouteImport.update({
   id: '/receitas',
   path: '/receitas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMetasRoute = AuthenticatedMetasRouteImport.update({
+  id: '/metas',
+  path: '/metas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedInvestimentosRoute =
+  AuthenticatedInvestimentosRouteImport.update({
+    id: '/investimentos',
+    path: '/investimentos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDespesasRoute = AuthenticatedDespesasRouteImport.update({
   id: '/despesas',
   path: '/despesas',
@@ -51,22 +87,53 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedContasRoute = AuthenticatedContasRouteImport.update({
+  id: '/contas',
+  path: '/contas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCartoesRoute = AuthenticatedCartoesRouteImport.update({
+  id: '/cartoes',
+  path: '/cartoes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCalendarioRoute = AuthenticatedCalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/calendario': typeof AuthenticatedCalendarioRoute
+  '/cartoes': typeof AuthenticatedCartoesRoute
+  '/contas': typeof AuthenticatedContasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/despesas': typeof AuthenticatedDespesasRoute
+  '/investimentos': typeof AuthenticatedInvestimentosRoute
+  '/metas': typeof AuthenticatedMetasRoute
   '/receitas': typeof AuthenticatedReceitasRoute
+  '/recorrencias': typeof AuthenticatedRecorrenciasRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/transferencias': typeof AuthenticatedTransferenciasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/calendario': typeof AuthenticatedCalendarioRoute
+  '/cartoes': typeof AuthenticatedCartoesRoute
+  '/contas': typeof AuthenticatedContasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/despesas': typeof AuthenticatedDespesasRoute
+  '/investimentos': typeof AuthenticatedInvestimentosRoute
+  '/metas': typeof AuthenticatedMetasRoute
   '/receitas': typeof AuthenticatedReceitasRoute
+  '/recorrencias': typeof AuthenticatedRecorrenciasRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/transferencias': typeof AuthenticatedTransferenciasRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -74,9 +141,17 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
+  '/_authenticated/cartoes': typeof AuthenticatedCartoesRoute
+  '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/despesas': typeof AuthenticatedDespesasRoute
+  '/_authenticated/investimentos': typeof AuthenticatedInvestimentosRoute
+  '/_authenticated/metas': typeof AuthenticatedMetasRoute
   '/_authenticated/receitas': typeof AuthenticatedReceitasRoute
+  '/_authenticated/recorrencias': typeof AuthenticatedRecorrenciasRoute
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/transferencias': typeof AuthenticatedTransferenciasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -84,26 +159,50 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/calendario'
+    | '/cartoes'
+    | '/contas'
     | '/dashboard'
     | '/despesas'
+    | '/investimentos'
+    | '/metas'
     | '/receitas'
+    | '/recorrencias'
+    | '/relatorios'
+    | '/transferencias'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/calendario'
+    | '/cartoes'
+    | '/contas'
     | '/dashboard'
     | '/despesas'
+    | '/investimentos'
+    | '/metas'
     | '/receitas'
+    | '/recorrencias'
+    | '/relatorios'
+    | '/transferencias'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
+    | '/_authenticated/calendario'
+    | '/_authenticated/cartoes'
+    | '/_authenticated/contas'
     | '/_authenticated/dashboard'
     | '/_authenticated/despesas'
+    | '/_authenticated/investimentos'
+    | '/_authenticated/metas'
     | '/_authenticated/receitas'
+    | '/_authenticated/recorrencias'
+    | '/_authenticated/relatorios'
+    | '/_authenticated/transferencias'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -143,11 +242,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/transferencias': {
+      id: '/_authenticated/transferencias'
+      path: '/transferencias'
+      fullPath: '/transferencias'
+      preLoaderRoute: typeof AuthenticatedTransferenciasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relatorios': {
+      id: '/_authenticated/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/recorrencias': {
+      id: '/_authenticated/recorrencias'
+      path: '/recorrencias'
+      fullPath: '/recorrencias'
+      preLoaderRoute: typeof AuthenticatedRecorrenciasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/receitas': {
       id: '/_authenticated/receitas'
       path: '/receitas'
       fullPath: '/receitas'
       preLoaderRoute: typeof AuthenticatedReceitasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/metas': {
+      id: '/_authenticated/metas'
+      path: '/metas'
+      fullPath: '/metas'
+      preLoaderRoute: typeof AuthenticatedMetasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/investimentos': {
+      id: '/_authenticated/investimentos'
+      path: '/investimentos'
+      fullPath: '/investimentos'
+      preLoaderRoute: typeof AuthenticatedInvestimentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/despesas': {
@@ -164,19 +298,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/contas': {
+      id: '/_authenticated/contas'
+      path: '/contas'
+      fullPath: '/contas'
+      preLoaderRoute: typeof AuthenticatedContasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cartoes': {
+      id: '/_authenticated/cartoes'
+      path: '/cartoes'
+      fullPath: '/cartoes'
+      preLoaderRoute: typeof AuthenticatedCartoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/calendario': {
+      id: '/_authenticated/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof AuthenticatedCalendarioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
+  AuthenticatedCartoesRoute: typeof AuthenticatedCartoesRoute
+  AuthenticatedContasRoute: typeof AuthenticatedContasRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDespesasRoute: typeof AuthenticatedDespesasRoute
+  AuthenticatedInvestimentosRoute: typeof AuthenticatedInvestimentosRoute
+  AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
   AuthenticatedReceitasRoute: typeof AuthenticatedReceitasRoute
+  AuthenticatedRecorrenciasRoute: typeof AuthenticatedRecorrenciasRoute
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedTransferenciasRoute: typeof AuthenticatedTransferenciasRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
+  AuthenticatedCartoesRoute: AuthenticatedCartoesRoute,
+  AuthenticatedContasRoute: AuthenticatedContasRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDespesasRoute: AuthenticatedDespesasRoute,
+  AuthenticatedInvestimentosRoute: AuthenticatedInvestimentosRoute,
+  AuthenticatedMetasRoute: AuthenticatedMetasRoute,
   AuthenticatedReceitasRoute: AuthenticatedReceitasRoute,
+  AuthenticatedRecorrenciasRoute: AuthenticatedRecorrenciasRoute,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedTransferenciasRoute: AuthenticatedTransferenciasRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
