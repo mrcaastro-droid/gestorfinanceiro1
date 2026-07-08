@@ -2,15 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageContainer, PageHeader } from "@/components/app-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SimpleCrud } from "@/components/simple-crud";
+import { CategoriesManager } from "@/components/categories-manager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTheme } from "@/lib/theme";
-import { useList, type CategoryRow } from "@/lib/finance";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Tag, Landmark, CreditCard, Users, Hash, TrendingUp, Target, Sun, Moon, Palette } from "lucide-react";
+import { Landmark, CreditCard, Users, Hash, TrendingUp, Target, Sun, Moon, Palette } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({ component: SettingsPage });
 
