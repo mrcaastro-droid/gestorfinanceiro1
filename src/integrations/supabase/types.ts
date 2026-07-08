@@ -804,6 +804,39 @@ export type Database = {
           },
         ]
       }
+      whatsapp_accounts: {
+        Row: {
+          alerts_enabled: boolean
+          created_at: string
+          id: string
+          link_code: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          alerts_enabled?: boolean
+          created_at?: string
+          id?: string
+          link_code?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          alerts_enabled?: boolean
+          created_at?: string
+          id?: string
+          link_code?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
