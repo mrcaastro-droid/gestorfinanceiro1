@@ -93,13 +93,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Gerencie receitas, despesas, cartões, investimentos e metas em um só lugar. Dashboard intuitivo, relatórios e total controle das suas finanças.",
       },
       { name: "author", content: "Gestor Financeiro" },
-      { property: "og:title", content: "Gestor Financeiro" },
+      { property: "og:title", content: "Gestor Financeiro — Controle suas finanças pessoais" },
       {
         property: "og:description",
-        content: "Sistema completo de gestão financeira pessoal: dashboard, receitas, despesas, cartões, investimentos e metas.",
+        content: "Gerencie receitas, despesas, cartões, investimentos e metas em um só lugar. Dashboard intuitivo, relatórios e total controle das suas finanças.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Gestor Financeiro — Controle suas finanças pessoais" },
+      { name: "twitter:description", content: "Gerencie receitas, despesas, cartões, investimentos e metas em um só lugar. Dashboard intuitivo, relatórios e total controle das suas finanças." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/46e849b2-4a04-4f8a-8bab-a4806ae92236" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/46e849b2-4a04-4f8a-8bab-a4806ae92236" },
     ],
     links: [
       {
