@@ -134,6 +134,7 @@ export interface CategoryRow {
   color: string;
   icon: string;
   type: "receita" | "despesa" | "ambos";
+  parent_id: string | null;
 }
 
 export interface GoalRow {
