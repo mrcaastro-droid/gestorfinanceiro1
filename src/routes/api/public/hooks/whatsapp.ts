@@ -71,9 +71,11 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
     handlers: {
       POST: async ({ request }) => {
         const url = new URL(request.url);
-        if (url.searchParams.get("token") !== process.env.WHATSAPP_WEBHOOK_TOKEN) {
-          return new Response("Forbidden", { status: 403 });
-        }
+        const token = url.searchParams.get("token");
+        const ok =
+          (!!token && token === process.env.SUPABASE_PUBLISHABLE_KEY) ||
+          (!!token && token === process.env.WHATSAPP_WEBHOOK_TOKEN);
+        if (!ok) return new Response("Forbidden", { status: 403 });
 
         const form = await request.formData();
         const from = String(form.get("From") ?? "").replace("whatsapp:", "").trim();
