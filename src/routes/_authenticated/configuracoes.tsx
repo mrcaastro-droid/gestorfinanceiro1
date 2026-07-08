@@ -3,6 +3,7 @@ import { PageContainer, PageHeader } from "@/components/app-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SimpleCrud } from "@/components/simple-crud";
 import { CategoriesManager } from "@/components/categories-manager";
+import { WhatsAppSettings } from "@/components/whatsapp-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,7 @@ import { useTheme } from "@/lib/theme";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Landmark, CreditCard, Users, Hash, TrendingUp, Target, Sun, Moon, Palette } from "lucide-react";
+import { Landmark, CreditCard, Users, Hash, TrendingUp, Target, Sun, Moon, Palette, MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({ component: SettingsPage });
 
@@ -39,6 +40,7 @@ function SettingsPage() {
         <TabsList className="flex flex-wrap h-auto justify-start mb-6">
           <TabsTrigger value="geral">Geral</TabsTrigger>
           <TabsTrigger value="categorias">Categorias</TabsTrigger>
+          <TabsTrigger value="whatsapp"><MessageCircle className="size-4" /> WhatsApp</TabsTrigger>
           <TabsTrigger value="bancos">Bancos</TabsTrigger>
           <TabsTrigger value="formas">Formas de pagamento</TabsTrigger>
           <TabsTrigger value="pessoas">Pessoas</TabsTrigger>
@@ -74,6 +76,9 @@ function SettingsPage() {
 
         <TabsContent value="categorias">
           <CategoriesManager />
+        </TabsContent>
+        <TabsContent value="whatsapp">
+          <WhatsAppSettings />
         </TabsContent>
         <TabsContent value="bancos">
           <SimpleCrud embedded table="banks" title="Bancos" singular="Banco" icon={Landmark}
