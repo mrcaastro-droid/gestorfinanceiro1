@@ -70,7 +70,16 @@ export function TransactionDialog({
     }
   }, [open, editing]);
 
-  const cats = (categories ?? []).filter((c) => c.type === type || c.type === "ambos");
+  const catsRaw = (categories ?? []).filter((c) => c.type === type || c.type === "ambos");
+  const cats = catsRaw
+    .filter((c) => !c.parent_id)
+    .flatMap((parent) => [
+      { id: parent.id, name: parent.name },
+      ...catsRaw
+        .filter((c) => c.parent_id === parent.id)
+        .map((child) => ({ id: child.id, name: `   ↳ ${child.name}` })),
+    ])
+    .concat(catsRaw.filter((c) => c.parent_id && !catsRaw.some((p) => p.id === c.parent_id)).map((c) => ({ id: c.id, name: c.name })));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
