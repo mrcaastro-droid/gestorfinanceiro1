@@ -102,14 +102,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Gestor Financeiro — Controle suas finanças pessoais" },
       { name: "twitter:description", content: "Gerencie receitas, despesas, cartões, investimentos e metas em um só lugar. Dashboard intuitivo, relatórios e total controle das suas finanças." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/83f1197b-d5ed-43c5-a42e-70c3f7b19570" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/83f1197b-d5ed-43c5-a42e-70c3f7b19570" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/46e849b2-4a04-4f8a-8bab-a4806ae92236" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/46e849b2-4a04-4f8a-8bab-a4806ae92236" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
   shellComponent: RootShell,
