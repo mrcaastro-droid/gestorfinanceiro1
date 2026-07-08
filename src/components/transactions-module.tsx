@@ -1,0 +1,186 @@
+import { useMemo, useState } from "react";
+import { PageContainer, PageHeader } from "@/components/app-shell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/empty-state";
+import { ConfirmDelete } from "@/components/confirm-delete";
+import { TransactionDialog } from "@/components/transaction-dialog";
+import { useList, useRemove, type TransactionRow, type CategoryRow, type AccountRow } from "@/lib/finance";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { formatCurrency, formatDate } from "@/lib/format";
+import { toast } from "sonner";
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  Copy,
+  TrendingUp,
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  MoreVertical,
+} from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
+  const qc = useQueryClient();
+  const { data: transactions, isLoading } = useList<TransactionRow>("transactions", { orderBy: "date" });
+  const { data: categories } = useList<CategoryRow>("categories");
+  const { data: accounts } = useList<AccountRow>("accounts");
+  const remove = useRemove("transactions");
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<TransactionRow | null>(null);
+  const [search, setSearch] = useState("");
+  const [catFilter, setCatFilter] = useState("all");
+  const [accFilter, setAccFilter] = useState("all");
+  const [sort, setSort] = useState("date");
+
+  const catMap = useMemo(() => new Map((categories ?? []).map((c) => [c.id, c])), [categories]);
+  const accMap = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a])), [accounts]);
+
+  const rows = useMemo(() => {
+    let list = (transactions ?? []).filter((t) => t.type === type);
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (t) => (t.description ?? "").toLowerCase().includes(q) || (catMap.get(t.category_id ?? "")?.name ?? "").toLowerCase().includes(q),
+      );
+    }
+    if (catFilter !== "all") list = list.filter((t) => t.category_id === catFilter);
+    if (accFilter !== "all") list = list.filter((t) => t.account_id === accFilter);
+    list = list.slice().sort((a, b) => {
+      if (sort === "amount") return Number(b.amount) - Number(a.amount);
+      if (sort === "description") return (a.description ?? "").localeCompare(b.description ?? "");
+      return a.date > b.date ? -1 : 1;
+    });
+    return list;
+  }, [transactions, type, search, catFilter, accFilter, sort, catMap]);
+
+  const total = rows.reduce((s, t) => s + Number(t.amount), 0);
+  const cats = (categories ?? []).filter((c) => c.type === type || c.type === "ambos");
+
+  async function duplicate(t: TransactionRow) {
+    const { id, installment_group, installment_number, installment_total, ...rest } = t;
+    void id;
+    void installment_group;
+    void installment_number;
+    void installment_total;
+    const { error } = await supabase.from("transactions").insert({ ...rest, date: t.date });
+    if (error) return toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["transactions"] });
+    qc.invalidateQueries({ queryKey: ["accounts"] });
+    toast.success("Lançamento duplicado");
+  }
+
+  const isReceita = type === "receita";
+  const Icon = isReceita ? TrendingUp : TrendingDown;
+
+  return (
+    <PageContainer>
+      <PageHeader
+        title={isReceita ? "Receitas" : "Despesas"}
+        description={`${rows.length} lançamento(s) • Total ${formatCurrency(total)}`}
+        actions={
+          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            <Plus className="size-4" /> Nova
+          </Button>
+        }
+      />
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." className="pl-9" />
+        </div>
+        <Select value={catFilter} onValueChange={setCatFilter}>
+          <SelectTrigger className="sm:w-44"><SelectValue placeholder="Categoria" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas categorias</SelectItem>
+            {cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={accFilter} onValueChange={setAccFilter}>
+          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Conta" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas contas</SelectItem>
+            {(accounts ?? []).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={sort} onValueChange={setSort}>
+          <SelectTrigger className="sm:w-36"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="date">Data</SelectItem>
+            <SelectItem value="amount">Valor</SelectItem>
+            <SelectItem value="description">Descrição</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        {isLoading ? (
+          <div className="p-4 space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={Icon}
+            title={`Nenhuma ${isReceita ? "receita" : "despesa"} encontrada`}
+            description="Comece adicionando seu primeiro lançamento."
+            action={<Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Nova {isReceita ? "receita" : "despesa"}</Button>}
+          />
+        ) : (
+          <div className="divide-y divide-border">
+            {rows.map((t) => {
+              const cat = t.category_id ? catMap.get(t.category_id) : null;
+              const acc = t.account_id ? accMap.get(t.account_id) : null;
+              return (
+                <div key={t.id} className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-accent/40 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="size-10 rounded-xl grid place-items-center shrink-0" style={{ backgroundColor: (cat?.color ?? "#64748b") + "22", color: cat?.color ?? "#64748b" }}>
+                      {isReceita ? <ArrowUpRight className="size-5" /> : <ArrowDownRight className="size-5" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{t.description || cat?.name || "Lançamento"}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {cat?.name ?? "Sem categoria"} • {acc?.name ?? "Sem conta"} • {formatDate(t.date)}
+                        {!t.is_paid && <span className="text-amber-500"> • Pendente</span>}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <p className={`text-sm font-semibold tabular ${isReceita ? "text-income" : "text-expense"}`}>
+                      {isReceita ? "+" : "-"} {formatCurrency(Number(t.amount))}
+                    </p>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8"><MoreVertical className="size-4" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => { setEditing(t); setDialogOpen(true); }}>
+                          <Pencil className="size-4" /> Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => duplicate(t)}>
+                          <Copy className="size-4" /> Duplicar
+                        </DropdownMenuItem>
+                        <ConfirmDelete onConfirm={() => remove.mutate(t.id)}>
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                            <Trash2 className="size-4" /> Excluir
+                          </DropdownMenuItem>
+                        </ConfirmDelete>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <TransactionDialog open={dialogOpen} onOpenChange={setDialogOpen} type={type} editing={editing} />
+    </PageContainer>
+  );
+}
