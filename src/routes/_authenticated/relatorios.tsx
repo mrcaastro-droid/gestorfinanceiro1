@@ -104,6 +104,24 @@ function ReportsPage() {
   }, [rows, catMap, type]);
 
   const catTotal = byCategory.reduce((s, c) => s + c.value, 0);
+
+  // Breakdown by subcategory (individual leaf categories) for the selected period.
+  const bySubcategory = useMemo(() => {
+    const targetType = type === "receita" ? "receita" : "despesa";
+    const map = new Map<string, { name: string; value: number; color: string }>();
+    rows.filter((t) => t.type === targetType && t.category_id).forEach((t) => {
+      const cat = catMap.get(t.category_id as string);
+      if (!cat || !cat.parent_id) return; // only real subcategories
+      const parent = catMap.get(cat.parent_id);
+      const name = `${parent?.name ?? "?"} › ${cat.name}`;
+      const color = cat.color ?? parent?.color ?? "#94a3b8";
+      const prev = map.get(cat.id);
+      map.set(cat.id, { name, color, value: (prev?.value ?? 0) + Number(t.amount) });
+    });
+    return Array.from(map.values()).sort((a, b) => b.value - a.value).slice(0, 12);
+  }, [rows, catMap, type]);
+
+  const subTotal = bySubcategory.reduce((s, c) => s + c.value, 0);
   const periodLabel = month === "todos" ? `Ano de ${year}` : `${MONTHS_FULL[Number(month)]} de ${year}`;
 
   return (
@@ -222,6 +240,31 @@ function ReportsPage() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      {/* Despesas por subcategoria */}
+      <div className="bg-card border border-border rounded-2xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold">{type === "receita" ? "Receitas" : "Despesas"} por subcategoria</h3>
+          <span className="text-sm text-muted-foreground tabular">{formatCurrency(subTotal)}</span>
+        </div>
+        {bySubcategory.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Nenhum lançamento em subcategorias no período. Cadastre subcategorias em Configurações e vincule-as aos lançamentos.
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(200, bySubcategory.length * 38)}>
+            <BarChart data={bySubcategory} layout="vertical" margin={{ left: 8, right: 16 }}>
+              <CartesianGrid strokeDasharray="3 3" className="opacity-20" horizontal={false} />
+              <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatCompact(Number(v))} />
+              <YAxis type="category" dataKey="name" width={160} fontSize={11} tickLine={false} axisLine={false} />
+              <Tooltip formatter={(v: number) => formatCurrency(Number(v))} cursor={{ fill: "var(--muted)", opacity: 0.3 }} contentStyle={tooltipStyle} />
+              <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                {bySubcategory.map((c, i) => <Cell key={c.name} fill={c.color || PALETTE[i % PALETTE.length]} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Ranking de categorias */}
