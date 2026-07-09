@@ -23,6 +23,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   MoreVertical,
+  X,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -38,10 +39,25 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [accFilter, setAccFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [sort, setSort] = useState("date");
 
   const catMap = useMemo(() => new Map((categories ?? []).map((c) => [c.id, c])), [categories]);
   const accMap = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a])), [accounts]);
+
+  const years = useMemo(() => {
+    const set = new Set(
+      (transactions ?? []).filter((t) => t.type === type).map((t) => t.date.slice(0, 4)),
+    );
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [transactions, type]);
+
+  const monthNames = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  ];
 
   const rows = useMemo(() => {
     let list = (transactions ?? []).filter((t) => t.type === type);
@@ -53,13 +69,16 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
     }
     if (catFilter !== "all") list = list.filter((t) => t.category_id === catFilter);
     if (accFilter !== "all") list = list.filter((t) => t.account_id === accFilter);
+    if (yearFilter !== "all") list = list.filter((t) => t.date.slice(0, 4) === yearFilter);
+    if (monthFilter !== "all") list = list.filter((t) => t.date.slice(5, 7) === monthFilter);
+    if (statusFilter !== "all") list = list.filter((t) => (statusFilter === "paid" ? t.is_paid : !t.is_paid));
     list = list.slice().sort((a, b) => {
       if (sort === "amount") return Number(b.amount) - Number(a.amount);
       if (sort === "description") return (a.description ?? "").localeCompare(b.description ?? "");
       return a.date > b.date ? -1 : 1;
     });
     return list;
-  }, [transactions, type, search, catFilter, accFilter, sort, catMap]);
+  }, [transactions, type, search, catFilter, accFilter, yearFilter, monthFilter, statusFilter, sort, catMap]);
 
   const total = rows.reduce((s, t) => s + Number(t.amount), 0);
   const cats = (categories ?? []).filter((c) => c.type === type || c.type === "ambos");
@@ -92,7 +111,8 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+      <div className="flex flex-col gap-3 mb-5">
+        <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." className="pl-9" />
@@ -111,6 +131,32 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
             {(accounts ?? []).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <Select value={yearFilter} onValueChange={setYearFilter}>
+          <SelectTrigger className="sm:w-32"><SelectValue placeholder="Ano" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos anos</SelectItem>
+            {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={monthFilter} onValueChange={setMonthFilter}>
+          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Mês" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos meses</SelectItem>
+            {monthNames.map((m, i) => (
+              <SelectItem key={m} value={String(i + 1).padStart(2, "0")}>{m}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Situação" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas situações</SelectItem>
+            <SelectItem value="paid">Pago</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={sort} onValueChange={setSort}>
           <SelectTrigger className="sm:w-36"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -119,6 +165,15 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
             <SelectItem value="description">Descrição</SelectItem>
           </SelectContent>
         </Select>
+        {(catFilter !== "all" || accFilter !== "all" || yearFilter !== "all" || monthFilter !== "all" || statusFilter !== "all" || search) && (
+          <Button
+            variant="ghost"
+            onClick={() => { setSearch(""); setCatFilter("all"); setAccFilter("all"); setYearFilter("all"); setMonthFilter("all"); setStatusFilter("all"); }}
+          >
+            <X className="size-4" /> Limpar
+          </Button>
+        )}
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
