@@ -309,12 +309,14 @@ function StatCard({
   value,
   tone,
   highlight,
+  hidden,
 }: {
   icon: typeof Wallet;
   label: string;
   value: number;
   tone?: "income" | "expense";
   highlight?: boolean;
+  hidden?: boolean;
 }) {
   const valueColor = highlight ? "text-primary-foreground" : tone === "income" ? "text-income" : tone === "expense" ? "text-expense" : "text-foreground";
   return (
@@ -323,7 +325,7 @@ function StatCard({
         <p className={`text-xs font-medium uppercase tracking-wider ${highlight ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{label}</p>
         <Icon className={`size-4 ${highlight ? "text-primary-foreground/80" : "text-muted-foreground"}`} />
       </div>
-      <p className={`text-xl md:text-2xl font-bold tabular ${valueColor}`}>{formatCurrency(value)}</p>
+      <p className={`text-xl md:text-2xl font-bold tabular ${valueColor}`}>{maskCurrency(value, !!hidden)}</p>
     </div>
   );
 }
