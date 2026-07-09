@@ -23,6 +23,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   MoreVertical,
+  X,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
