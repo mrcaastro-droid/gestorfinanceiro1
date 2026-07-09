@@ -219,7 +219,7 @@ function Dashboard() {
                         <Cell key={i} fill={c.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<ChartTooltip />} />
+                    <Tooltip content={<ChartTooltip hidden={hidden} />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-2 mt-3">
