@@ -39,6 +39,24 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+function useHideValues() {
+  const [hidden, setHidden] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("dashboard.hide-values") === "true";
+  });
+  useEffect(() => {
+    window.localStorage.setItem("dashboard.hide-values", String(hidden));
+  }, [hidden]);
+  return { hidden, toggle: () => setHidden((v) => !v) };
+}
+
+function maskCurrency(value: number, hidden: boolean) {
+  if (!hidden) return formatCurrency(value);
+  const formatted = formatCurrency(value);
+  const digits = formatted.replace(/\D/g, "").length;
+  return "R$ " + "•".repeat(Math.max(4, digits));
+}
+
 function Dashboard() {
   useAutoGenerateRecurring();
   const { data: transactions, isLoading } = useList<TransactionRow>("transactions", { orderBy: "date" });
