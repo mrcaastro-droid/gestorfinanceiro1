@@ -153,11 +153,11 @@ function Dashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard icon={Wallet} label="Saldo atual" value={metrics.saldo} />
-          <StatCard icon={TrendingUp} label="Receitas do mês" value={metrics.receitas} tone="income" />
-          <StatCard icon={TrendingDown} label="Despesas do mês" value={metrics.despesas} tone="expense" />
-          <StatCard icon={PiggyBank} label="Economia do mês" value={metrics.economia} tone={metrics.economia >= 0 ? "income" : "expense"} />
-          <StatCard icon={Landmark} label="Patrimônio total" value={metrics.patrimonio} highlight />
+          <StatCard icon={Wallet} label="Saldo atual" value={metrics.saldo} hidden={hidden} />
+          <StatCard icon={TrendingUp} label="Receitas do mês" value={metrics.receitas} tone="income" hidden={hidden} />
+          <StatCard icon={TrendingDown} label="Despesas do mês" value={metrics.despesas} tone="expense" hidden={hidden} />
+          <StatCard icon={PiggyBank} label="Economia do mês" value={metrics.economia} tone={metrics.economia >= 0 ? "income" : "expense"} hidden={hidden} />
+          <StatCard icon={Landmark} label="Patrimônio total" value={metrics.patrimonio} highlight hidden={hidden} />
         </div>
       )}
 
