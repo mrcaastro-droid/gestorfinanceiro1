@@ -64,6 +64,7 @@ function Dashboard() {
   const { data: categories } = useList<CategoryRow>("categories");
   const { data: goals } = useList<GoalRow>("goals");
   const { data: investments } = useList<InvestmentRow>("investments");
+  const { hidden, toggle } = useHideValues();
 
   const now = new Date();
   const catMap = useMemo(() => new Map((categories ?? []).map((c) => [c.id, c])), [categories]);
