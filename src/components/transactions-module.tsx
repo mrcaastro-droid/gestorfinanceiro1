@@ -38,10 +38,25 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [accFilter, setAccFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [sort, setSort] = useState("date");
 
   const catMap = useMemo(() => new Map((categories ?? []).map((c) => [c.id, c])), [categories]);
   const accMap = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a])), [accounts]);
+
+  const years = useMemo(() => {
+    const set = new Set(
+      (transactions ?? []).filter((t) => t.type === type).map((t) => t.date.slice(0, 4)),
+    );
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [transactions, type]);
+
+  const monthNames = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  ];
 
   const rows = useMemo(() => {
     let list = (transactions ?? []).filter((t) => t.type === type);
@@ -53,13 +68,16 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
     }
     if (catFilter !== "all") list = list.filter((t) => t.category_id === catFilter);
     if (accFilter !== "all") list = list.filter((t) => t.account_id === accFilter);
+    if (yearFilter !== "all") list = list.filter((t) => t.date.slice(0, 4) === yearFilter);
+    if (monthFilter !== "all") list = list.filter((t) => t.date.slice(5, 7) === monthFilter);
+    if (statusFilter !== "all") list = list.filter((t) => (statusFilter === "paid" ? t.is_paid : !t.is_paid));
     list = list.slice().sort((a, b) => {
       if (sort === "amount") return Number(b.amount) - Number(a.amount);
       if (sort === "description") return (a.description ?? "").localeCompare(b.description ?? "");
       return a.date > b.date ? -1 : 1;
     });
     return list;
-  }, [transactions, type, search, catFilter, accFilter, sort, catMap]);
+  }, [transactions, type, search, catFilter, accFilter, yearFilter, monthFilter, statusFilter, sort, catMap]);
 
   const total = rows.reduce((s, t) => s + Number(t.amount), 0);
   const cats = (categories ?? []).filter((c) => c.type === type || c.type === "ambos");
