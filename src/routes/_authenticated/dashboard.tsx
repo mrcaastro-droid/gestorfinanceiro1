@@ -229,7 +229,7 @@ function Dashboard() {
                         <div className="size-2.5 rounded-sm shrink-0" style={{ backgroundColor: c.color }} />
                         <span className="truncate text-muted-foreground">{c.name}</span>
                       </div>
-                      <span className="tabular font-medium">{formatCurrency(c.value)}</span>
+                      <span className="tabular font-medium">{maskCurrency(c.value, hidden)}</span>
                     </div>
                   ))}
                 </div>
