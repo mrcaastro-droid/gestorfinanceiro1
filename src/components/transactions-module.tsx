@@ -110,7 +110,8 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+      <div className="flex flex-col gap-3 mb-5">
+        <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." className="pl-9" />
@@ -129,6 +130,32 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
             {(accounts ?? []).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <Select value={yearFilter} onValueChange={setYearFilter}>
+          <SelectTrigger className="sm:w-32"><SelectValue placeholder="Ano" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos anos</SelectItem>
+            {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={monthFilter} onValueChange={setMonthFilter}>
+          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Mês" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos meses</SelectItem>
+            {monthNames.map((m, i) => (
+              <SelectItem key={m} value={String(i + 1).padStart(2, "0")}>{m}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Situação" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas situações</SelectItem>
+            <SelectItem value="paid">Pago</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={sort} onValueChange={setSort}>
           <SelectTrigger className="sm:w-36"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -137,6 +164,15 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
             <SelectItem value="description">Descrição</SelectItem>
           </SelectContent>
         </Select>
+        {(catFilter !== "all" || accFilter !== "all" || yearFilter !== "all" || monthFilter !== "all" || statusFilter !== "all" || search) && (
+          <Button
+            variant="ghost"
+            onClick={() => { setSearch(""); setCatFilter("all"); setAccFilter("all"); setYearFilter("all"); setMonthFilter("all"); setStatusFilter("all"); }}
+          >
+            <X className="size-4" /> Limpar
+          </Button>
+        )}
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
