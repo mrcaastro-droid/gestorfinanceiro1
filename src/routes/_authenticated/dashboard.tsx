@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -24,6 +24,8 @@ import {
   AlertTriangle,
   CalendarClock,
   Target,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { PageContainer, PageHeader } from "@/components/app-shell";
 import { useList, useAutoGenerateRecurring, type TransactionRow, type AccountRow, type CategoryRow, type GoalRow, type InvestmentRow } from "@/lib/finance";
@@ -37,6 +39,24 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+function useHideValues() {
+  const [hidden, setHidden] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("dashboard.hide-values") === "true";
+  });
+  useEffect(() => {
+    window.localStorage.setItem("dashboard.hide-values", String(hidden));
+  }, [hidden]);
+  return { hidden, toggle: () => setHidden((v) => !v) };
+}
+
+function maskCurrency(value: number, hidden: boolean) {
+  if (!hidden) return formatCurrency(value);
+  const formatted = formatCurrency(value);
+  const digits = formatted.replace(/\D/g, "").length;
+  return "R$ " + "•".repeat(Math.max(4, digits));
+}
+
 function Dashboard() {
   useAutoGenerateRecurring();
   const { data: transactions, isLoading } = useList<TransactionRow>("transactions", { orderBy: "date" });
@@ -44,6 +64,7 @@ function Dashboard() {
   const { data: categories } = useList<CategoryRow>("categories");
   const { data: goals } = useList<GoalRow>("goals");
   const { data: investments } = useList<InvestmentRow>("investments");
+  const { hidden, toggle } = useHideValues();
 
   const now = new Date();
   const catMap = useMemo(() => new Map((categories ?? []).map((c) => [c.id, c])), [categories]);
@@ -108,7 +129,21 @@ function Dashboard() {
 
   return (
     <PageContainer>
-      <PageHeader title="Visão Geral" description="Seu panorama financeiro do mês" />
+      <PageHeader
+        title="Visão Geral"
+        description="Seu panorama financeiro do mês"
+        actions={
+          <button
+            onClick={toggle}
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-border bg-card hover:bg-accent transition-colors"
+            aria-label={hidden ? "Mostrar valores" : "Ocultar valores"}
+            title={hidden ? "Mostrar valores" : "Ocultar valores"}
+          >
+            {hidden ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+            <span className="hidden sm:inline">{hidden ? "Mostrar" : "Ocultar"}</span>
+          </button>
+        }
+      />
 
       {isLoading ? (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -118,11 +153,11 @@ function Dashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard icon={Wallet} label="Saldo atual" value={metrics.saldo} />
-          <StatCard icon={TrendingUp} label="Receitas do mês" value={metrics.receitas} tone="income" />
-          <StatCard icon={TrendingDown} label="Despesas do mês" value={metrics.despesas} tone="expense" />
-          <StatCard icon={PiggyBank} label="Economia do mês" value={metrics.economia} tone={metrics.economia >= 0 ? "income" : "expense"} />
-          <StatCard icon={Landmark} label="Patrimônio total" value={metrics.patrimonio} highlight />
+          <StatCard icon={Wallet} label="Saldo atual" value={metrics.saldo} hidden={hidden} />
+          <StatCard icon={TrendingUp} label="Receitas do mês" value={metrics.receitas} tone="income" hidden={hidden} />
+          <StatCard icon={TrendingDown} label="Despesas do mês" value={metrics.despesas} tone="expense" hidden={hidden} />
+          <StatCard icon={PiggyBank} label="Economia do mês" value={metrics.economia} tone={metrics.economia >= 0 ? "income" : "expense"} hidden={hidden} />
+          <StatCard icon={Landmark} label="Patrimônio total" value={metrics.patrimonio} highlight hidden={hidden} />
         </div>
       )}
 
@@ -134,7 +169,7 @@ function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} className="opacity-30" />
                 <XAxis dataKey="mes" tickLine={false} axisLine={false} fontSize={12} stroke="currentColor" className="text-muted-foreground" />
                 <YAxis tickLine={false} axisLine={false} fontSize={11} stroke="currentColor" className="text-muted-foreground" tickFormatter={(v) => `${v / 1000}k`} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--muted)", opacity: 0.3 }} />
+                <Tooltip content={<ChartTooltip hidden={hidden} />} cursor={{ fill: "var(--muted)", opacity: 0.3 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="Receitas" fill="var(--income)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Despesas" fill="var(--expense)" radius={[4, 4, 0, 0]} />
@@ -161,7 +196,7 @@ function Dashboard() {
                         </div>
                       </div>
                       <p className={`text-sm font-semibold tabular ${t.type === "receita" ? "text-income" : "text-expense"}`}>
-                        {t.type === "receita" ? "+" : "-"} {formatCurrency(Number(t.amount))}
+                        {t.type === "receita" ? "+" : "-"} {maskCurrency(Number(t.amount), hidden)}
                       </p>
                     </div>
                   );
@@ -184,7 +219,7 @@ function Dashboard() {
                         <Cell key={i} fill={c.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<ChartTooltip />} />
+                    <Tooltip content={<ChartTooltip hidden={hidden} />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-2 mt-3">
@@ -194,7 +229,7 @@ function Dashboard() {
                         <div className="size-2.5 rounded-sm shrink-0" style={{ backgroundColor: c.color }} />
                         <span className="truncate text-muted-foreground">{c.name}</span>
                       </div>
-                      <span className="tabular font-medium">{formatCurrency(c.value)}</span>
+                      <span className="tabular font-medium">{maskCurrency(c.value, hidden)}</span>
                     </div>
                   ))}
                 </div>
@@ -212,7 +247,7 @@ function Dashboard() {
                       <p className="text-sm font-medium truncate">{t.description || "Despesa"}</p>
                       <p className="text-[11px] text-expense uppercase">Venceu em {formatDateShort(t.date)}</p>
                     </div>
-                    <p className="text-sm font-semibold tabular">{formatCurrency(Number(t.amount))}</p>
+                    <p className="text-sm font-semibold tabular">{maskCurrency(Number(t.amount), hidden)}</p>
                   </div>
                 ))}
               </div>
@@ -233,7 +268,7 @@ function Dashboard() {
                       <p className="text-sm font-medium truncate">{t.description || "Despesa"}</p>
                       <p className="text-[11px] text-muted-foreground uppercase">Vence em {formatDateShort(t.date)}</p>
                     </div>
-                    <p className="text-sm font-semibold tabular">{formatCurrency(Number(t.amount))}</p>
+                    <p className="text-sm font-semibold tabular">{maskCurrency(Number(t.amount), hidden)}</p>
                   </div>
                 ))}
               </div>
@@ -274,12 +309,14 @@ function StatCard({
   value,
   tone,
   highlight,
+  hidden,
 }: {
   icon: typeof Wallet;
   label: string;
   value: number;
   tone?: "income" | "expense";
   highlight?: boolean;
+  hidden?: boolean;
 }) {
   const valueColor = highlight ? "text-primary-foreground" : tone === "income" ? "text-income" : tone === "expense" ? "text-expense" : "text-foreground";
   return (
@@ -288,7 +325,7 @@ function StatCard({
         <p className={`text-xs font-medium uppercase tracking-wider ${highlight ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{label}</p>
         <Icon className={`size-4 ${highlight ? "text-primary-foreground/80" : "text-muted-foreground"}`} />
       </div>
-      <p className={`text-xl md:text-2xl font-bold tabular ${valueColor}`}>{formatCurrency(value)}</p>
+      <p className={`text-xl md:text-2xl font-bold tabular ${valueColor}`}>{maskCurrency(value, !!hidden)}</p>
     </div>
   );
 }
@@ -305,7 +342,7 @@ function Card({ title, children, action }: { title: string; children: React.Reac
   );
 }
 
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
+function ChartTooltip({ active, payload, label, hidden }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string; hidden?: boolean }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-border bg-popover px-3 py-2 shadow-lg text-xs">
@@ -314,7 +351,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
         <div key={i} className="flex items-center gap-2">
           <span className="size-2 rounded-full" style={{ backgroundColor: p.color }} />
           <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-semibold tabular">{formatCurrency(Number(p.value))}</span>
+          <span className="font-semibold tabular">{maskCurrency(Number(p.value), !!hidden)}</span>
         </div>
       ))}
     </div>
