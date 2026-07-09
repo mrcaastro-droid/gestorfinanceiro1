@@ -268,7 +268,7 @@ function Dashboard() {
                       <p className="text-sm font-medium truncate">{t.description || "Despesa"}</p>
                       <p className="text-[11px] text-muted-foreground uppercase">Vence em {formatDateShort(t.date)}</p>
                     </div>
-                    <p className="text-sm font-semibold tabular">{formatCurrency(Number(t.amount))}</p>
+                    <p className="text-sm font-semibold tabular">{maskCurrency(Number(t.amount), hidden)}</p>
                   </div>
                 ))}
               </div>
