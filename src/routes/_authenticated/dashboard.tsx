@@ -196,7 +196,7 @@ function Dashboard() {
                         </div>
                       </div>
                       <p className={`text-sm font-semibold tabular ${t.type === "receita" ? "text-income" : "text-expense"}`}>
-                        {t.type === "receita" ? "+" : "-"} {formatCurrency(Number(t.amount))}
+                        {t.type === "receita" ? "+" : "-"} {maskCurrency(Number(t.amount), hidden)}
                       </p>
                     </div>
                   );
