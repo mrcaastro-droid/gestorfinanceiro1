@@ -342,7 +342,7 @@ function Card({ title, children, action }: { title: string; children: React.Reac
   );
 }
 
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
+function ChartTooltip({ active, payload, label, hidden }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string; hidden?: boolean }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-border bg-popover px-3 py-2 shadow-lg text-xs">
@@ -351,7 +351,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
         <div key={i} className="flex items-center gap-2">
           <span className="size-2 rounded-full" style={{ backgroundColor: p.color }} />
           <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-semibold tabular">{formatCurrency(Number(p.value))}</span>
+          <span className="font-semibold tabular">{maskCurrency(Number(p.value), !!hidden)}</span>
         </div>
       ))}
     </div>
