@@ -24,6 +24,8 @@ import {
   AlertTriangle,
   CalendarClock,
   Target,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { PageContainer, PageHeader } from "@/components/app-shell";
 import { useList, useAutoGenerateRecurring, type TransactionRow, type AccountRow, type CategoryRow, type GoalRow, type InvestmentRow } from "@/lib/finance";
