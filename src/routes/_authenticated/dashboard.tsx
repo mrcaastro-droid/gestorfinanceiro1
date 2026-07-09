@@ -169,7 +169,7 @@ function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} className="opacity-30" />
                 <XAxis dataKey="mes" tickLine={false} axisLine={false} fontSize={12} stroke="currentColor" className="text-muted-foreground" />
                 <YAxis tickLine={false} axisLine={false} fontSize={11} stroke="currentColor" className="text-muted-foreground" tickFormatter={(v) => `${v / 1000}k`} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--muted)", opacity: 0.3 }} />
+                <Tooltip content={<ChartTooltip hidden={hidden} />} cursor={{ fill: "var(--muted)", opacity: 0.3 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="Receitas" fill="var(--income)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Despesas" fill="var(--expense)" radius={[4, 4, 0, 0]} />
