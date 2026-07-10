@@ -8,7 +8,7 @@ import {
   PieChart, Pie, Cell, Legend, AreaChart, Area, LineChart, Line,
 } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowDownRight, ArrowUpRight, Scale, PiggyBank } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Scale, PiggyBank, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({ component: ReportsPage });
@@ -17,7 +17,7 @@ const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const PALETTE = ["#10b981", "#6366f1", "#f43f5e", "#f59e0b", "#0ea5e9", "#a855f7", "#14b8a6", "#ec4899", "#84cc16", "#f97316", "#8b5cf6", "#06b6d4"];
 
-type TypeFilter = "todos" | "despesa" | "receita";
+type TypeFilter = "todos" | "despesa" | "receita" | "transferencia";
 
 function ReportsPage() {
   const { data: transactions } = useList<TransactionRow>("transactions", { orderBy: "date" });
@@ -69,7 +69,8 @@ function ReportsPage() {
   const totals = useMemo(() => {
     const rec = rows.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
     const exp = rows.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
-    return { rec, exp, saldo: rec - exp, rate: rec > 0 ? ((rec - exp) / rec) * 100 : 0 };
+    const transf = rows.filter((t) => t.type === "transferencia").reduce((s, t) => s + Number(t.amount), 0);
+    return { rec, exp, transf, saldo: rec - exp, rate: rec > 0 ? ((rec - exp) / rec) * 100 : 0 };
   }, [rows]);
 
   // Monthly cash flow across the whole year (respects category/account/type filters).
@@ -77,7 +78,8 @@ function ReportsPage() {
     const mr = yearRows.filter((t) => new Date(t.date + "T00:00:00").getMonth() === idx);
     const Receitas = mr.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
     const Despesas = mr.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
-    return { mes: m, Receitas, Despesas, Saldo: Receitas - Despesas };
+    const Transferido = mr.filter((t) => t.type === "transferencia").reduce((s, t) => s + Number(t.amount), 0);
+    return { mes: m, Receitas, Despesas, Transferido, Saldo: Receitas - Despesas };
   }), [yearRows]);
 
   // Cumulative balance evolution.
@@ -88,7 +90,7 @@ function ReportsPage() {
 
   // Breakdown by category (aggregating subcategories under their parent) for the selected period.
   const byCategory = useMemo(() => {
-    const targetType = type === "receita" ? "receita" : "despesa";
+    const targetType = type === "todos" ? "despesa" : type;
     const map = new Map<string, { name: string; value: number; color: string }>();
     rows.filter((t) => t.type === targetType).forEach((t) => {
       const cat = t.category_id ? catMap.get(t.category_id) : null;
@@ -107,7 +109,7 @@ function ReportsPage() {
 
   // Breakdown by subcategory (individual leaf categories) for the selected period.
   const bySubcategory = useMemo(() => {
-    const targetType = type === "receita" ? "receita" : "despesa";
+    const targetType = type === "todos" ? "despesa" : type;
     const map = new Map<string, { name: string; value: number; color: string }>();
     rows.filter((t) => t.type === targetType && t.category_id).forEach((t) => {
       const cat = catMap.get(t.category_id as string);
@@ -123,6 +125,8 @@ function ReportsPage() {
 
   const subTotal = bySubcategory.reduce((s, c) => s + c.value, 0);
   const periodLabel = month === "todos" ? `Ano de ${year}` : `${MONTHS_FULL[Number(month)]} de ${year}`;
+  const breakdownLabel = type === "receita" ? "Receitas" : type === "transferencia" ? "Transferências" : "Despesas";
+  const hasTransfers = monthly.some((m) => m.Transferido > 0);
 
   return (
     <PageContainer>
