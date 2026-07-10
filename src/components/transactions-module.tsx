@@ -108,7 +108,6 @@ export function TransactionsModule({ type }: { type: MovType }) {
   }
 
   const cfg = MOV_CONFIG[type];
-  const isReceita = type === "receita";
   const Icon = cfg.Icon;
 
   return (
