@@ -208,10 +208,29 @@ function ReportsPage() {
         </ResponsiveContainer>
       </div>
 
+      {/* Transferências / Reservas por mês */}
+      {hasTransfers && (
+        <div className="bg-card border border-border rounded-2xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold">Transferências / Reservas por mês — {year}</h3>
+            <span className="text-sm text-muted-foreground tabular">{formatCurrency(totals.transf)}</span>
+          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={monthly}>
+              <CartesianGrid strokeDasharray="3 3" className="opacity-20" vertical={false} />
+              <XAxis dataKey="mes" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatCompact(Number(v))} />
+              <Tooltip formatter={(v: number) => formatCurrency(Number(v))} cursor={{ fill: "var(--muted)", opacity: 0.3 }} contentStyle={tooltipStyle} />
+              <Bar dataKey="Transferido" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Donut por categoria */}
         <div className="bg-card border border-border rounded-2xl p-5">
-          <h3 className="font-semibold mb-4">{type === "receita" ? "Receitas" : "Despesas"} por categoria</h3>
+          <h3 className="font-semibold mb-4">{breakdownLabel} por categoria</h3>
           {byCategory.length === 0 ? (
             <p className="text-sm text-muted-foreground py-16 text-center">Sem dados para o período.</p>
           ) : (
