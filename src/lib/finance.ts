@@ -126,13 +126,14 @@ export function useAutoGenerateRecurring() {
 
 export interface TransactionRow {
   id: string;
-  type: "receita" | "despesa";
+  type: "receita" | "despesa" | "transferencia";
   amount: number;
   date: string;
   description: string | null;
   notes: string | null;
   category_id: string | null;
   account_id: string | null;
+  transfer_account_id: string | null;
   card_id: string | null;
   payment_method_id: string | null;
   person_id: string | null;
@@ -159,7 +160,7 @@ export interface CategoryRow {
   name: string;
   color: string;
   icon: string;
-  type: "receita" | "despesa" | "ambos";
+  type: "receita" | "despesa" | "ambos" | "transferencia";
   parent_id: string | null;
 }
 
