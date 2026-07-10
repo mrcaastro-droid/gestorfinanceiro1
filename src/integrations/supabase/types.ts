@@ -662,6 +662,7 @@ export type Database = {
           payment_method_id: string | null
           person_id: string | null
           recurring_rule_id: string | null
+          transfer_account_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
           user_id: string
@@ -683,6 +684,7 @@ export type Database = {
           payment_method_id?: string | null
           person_id?: string | null
           recurring_rule_id?: string | null
+          transfer_account_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id?: string
@@ -704,6 +706,7 @@ export type Database = {
           payment_method_id?: string | null
           person_id?: string | null
           recurring_rule_id?: string | null
+          transfer_account_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id?: string
@@ -749,6 +752,13 @@ export type Database = {
             columns: ["recurring_rule_id"]
             isOneToOne: false
             referencedRelation: "recurring_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_transfer_account_id_fkey"
+            columns: ["transfer_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -855,7 +865,7 @@ export type Database = {
         | "dinheiro"
         | "investimento"
         | "outro"
-      category_type: "receita" | "despesa" | "ambos"
+      category_type: "receita" | "despesa" | "ambos" | "transferencia"
       person_type: "cliente" | "empresa" | "pessoa_fisica" | "outro"
       recurrence_frequency:
         | "semanal"
@@ -864,7 +874,7 @@ export type Database = {
         | "trimestral"
         | "semestral"
         | "anual"
-      transaction_type: "receita" | "despesa"
+      transaction_type: "receita" | "despesa" | "transferencia"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1000,7 +1010,7 @@ export const Constants = {
         "investimento",
         "outro",
       ],
-      category_type: ["receita", "despesa", "ambos"],
+      category_type: ["receita", "despesa", "ambos", "transferencia"],
       person_type: ["cliente", "empresa", "pessoa_fisica", "outro"],
       recurrence_frequency: [
         "semanal",
@@ -1010,7 +1020,7 @@ export const Constants = {
         "semestral",
         "anual",
       ],
-      transaction_type: ["receita", "despesa"],
+      transaction_type: ["receita", "despesa", "transferencia"],
     },
   },
 } as const

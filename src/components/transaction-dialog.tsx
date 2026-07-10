@@ -11,9 +11,11 @@ import { insertRows, useList, type TransactionRow, type CategoryRow, type Accoun
 import { todayISO } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, ArrowLeftRight } from "lucide-react";
 
 const NONE = "__none__";
+
+type MovType = "receita" | "despesa" | "transferencia";
 
 export function TransactionDialog({
   open,
@@ -23,7 +25,7 @@ export function TransactionDialog({
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  type: "receita" | "despesa";
+  type: MovType;
   editing?: TransactionRow | null;
 }) {
   const qc = useQueryClient();
@@ -34,6 +36,7 @@ export function TransactionDialog({
   const { data: people } = useList<{ id: string; name: string }>("people");
 
   const [busy, setBusy] = useState(false);
+  const [movType, setMovType] = useState<MovType>(type);
   const [form, setForm] = useState({
     amount: "",
     date: todayISO(),
@@ -41,6 +44,7 @@ export function TransactionDialog({
     notes: "",
     category_id: NONE,
     account_id: NONE,
+    transfer_account_id: NONE,
     card_id: NONE,
     payment_method_id: NONE,
     person_id: NONE,
@@ -51,6 +55,7 @@ export function TransactionDialog({
   useEffect(() => {
     if (open) {
       if (editing) {
+        setMovType(editing.type);
         setForm({
           amount: String(editing.amount),
           date: editing.date,
@@ -58,6 +63,7 @@ export function TransactionDialog({
           notes: editing.notes ?? "",
           category_id: editing.category_id ?? NONE,
           account_id: editing.account_id ?? NONE,
+          transfer_account_id: editing.transfer_account_id ?? NONE,
           card_id: editing.card_id ?? NONE,
           payment_method_id: editing.payment_method_id ?? NONE,
           person_id: editing.person_id ?? NONE,
@@ -65,12 +71,16 @@ export function TransactionDialog({
           installments: 1,
         });
       } else {
-        setForm((f) => ({ ...f, amount: "", description: "", notes: "", date: todayISO(), installments: 1 }));
+        setMovType(type);
+        setForm((f) => ({ ...f, amount: "", description: "", notes: "", date: todayISO(), installments: 1, transfer_account_id: NONE }));
       }
     }
-  }, [open, editing]);
+  }, [open, editing, type]);
 
-  const catsRaw = (categories ?? []).filter((c) => c.type === type || c.type === "ambos");
+  const isTransfer = movType === "transferencia";
+  const catsRaw = (categories ?? []).filter((c) =>
+    isTransfer ? c.type === "transferencia" : c.type === movType || c.type === "ambos",
+  );
   const cats = catsRaw
     .filter((c) => !c.parent_id)
     .flatMap((parent) => [
@@ -85,24 +95,30 @@ export function TransactionDialog({
     e.preventDefault();
     const amount = parseFloat(form.amount.replace(",", "."));
     if (!amount || amount <= 0) return toast.error("Informe um valor válido.");
+    if (isTransfer) {
+      if (form.account_id === NONE) return toast.error("Selecione a conta de origem.");
+      if (form.transfer_account_id === NONE) return toast.error("Selecione a conta de destino.");
+      if (form.account_id === form.transfer_account_id) return toast.error("Escolha contas diferentes.");
+    }
     setBusy(true);
     try {
       const base = {
-        type,
+        type: movType,
         description: form.description || null,
         notes: form.notes || null,
         category_id: form.category_id === NONE ? null : form.category_id,
         account_id: form.account_id === NONE ? null : form.account_id,
-        card_id: form.card_id === NONE ? null : form.card_id,
-        payment_method_id: form.payment_method_id === NONE ? null : form.payment_method_id,
-        person_id: form.person_id === NONE ? null : form.person_id,
+        transfer_account_id: isTransfer ? (form.transfer_account_id === NONE ? null : form.transfer_account_id) : null,
+        card_id: isTransfer ? null : form.card_id === NONE ? null : form.card_id,
+        payment_method_id: isTransfer ? null : form.payment_method_id === NONE ? null : form.payment_method_id,
+        person_id: isTransfer ? null : form.person_id === NONE ? null : form.person_id,
         is_paid: form.is_paid,
       };
 
       if (editing) {
         const { error } = await supabase.from("transactions").update({ ...base, amount, date: form.date }).eq("id", editing.id);
         if (error) throw error;
-      } else if (type === "despesa" && form.installments > 1) {
+      } else if (movType === "despesa" && form.installments > 1) {
         const group = crypto.randomUUID();
         const per = Math.round((amount / form.installments) * 100) / 100;
         const rows = Array.from({ length: form.installments }).map((_, i) => {
@@ -136,7 +152,7 @@ export function TransactionDialog({
     }
   }
 
-  const label = type === "receita" ? "Receita" : "Despesa";
+  const label = movType === "receita" ? "Receita" : movType === "despesa" ? "Despesa" : "Transferência";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -145,6 +161,28 @@ export function TransactionDialog({
           <DialogTitle>{editing ? `Editar ${label.toLowerCase()}` : `Nova ${label.toLowerCase()}`}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { v: "receita", label: "Receita", icon: TrendingUp },
+              { v: "despesa", label: "Despesa", icon: TrendingDown },
+              { v: "transferencia", label: "Transferência", icon: ArrowLeftRight },
+            ] as const).map((opt) => {
+              const active = movType === opt.v;
+              return (
+                <button
+                  type="button"
+                  key={opt.v}
+                  onClick={() => setMovType(opt.v)}
+                  className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-medium transition-colors ${
+                    active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  <opt.icon className="size-4" />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Valor (R$)">
               <Input inputMode="decimal" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0,00" />
@@ -156,23 +194,41 @@ export function TransactionDialog({
           <Field label="Descrição">
             <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={`Descrição da ${label.toLowerCase()}`} />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Categoria">
-              <Picker value={form.category_id} onChange={(v) => setForm({ ...form, category_id: v })} items={cats} placeholder="Selecione" />
-            </Field>
-            <Field label="Conta">
-              <Picker value={form.account_id} onChange={(v) => setForm({ ...form, account_id: v })} items={accounts ?? []} placeholder="Selecione" />
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={type === "receita" ? "Forma de recebimento" : "Forma de pagamento"}>
-              <Picker value={form.payment_method_id} onChange={(v) => setForm({ ...form, payment_method_id: v })} items={methods ?? []} placeholder="Selecione" />
-            </Field>
-            <Field label="Pessoa (opcional)">
-              <Picker value={form.person_id} onChange={(v) => setForm({ ...form, person_id: v })} items={people ?? []} placeholder="Selecione" />
-            </Field>
-          </div>
-          {type === "despesa" && (
+          {isTransfer ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Conta de origem">
+                  <Picker value={form.account_id} onChange={(v) => setForm({ ...form, account_id: v })} items={accounts ?? []} placeholder="Selecione" />
+                </Field>
+                <Field label="Conta de destino">
+                  <Picker value={form.transfer_account_id} onChange={(v) => setForm({ ...form, transfer_account_id: v })} items={accounts ?? []} placeholder="Selecione" />
+                </Field>
+              </div>
+              <Field label="Categoria (reserva/investimento)">
+                <Picker value={form.category_id} onChange={(v) => setForm({ ...form, category_id: v })} items={cats} placeholder="Selecione" />
+              </Field>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Categoria">
+                  <Picker value={form.category_id} onChange={(v) => setForm({ ...form, category_id: v })} items={cats} placeholder="Selecione" />
+                </Field>
+                <Field label="Conta">
+                  <Picker value={form.account_id} onChange={(v) => setForm({ ...form, account_id: v })} items={accounts ?? []} placeholder="Selecione" />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={movType === "receita" ? "Forma de recebimento" : "Forma de pagamento"}>
+                  <Picker value={form.payment_method_id} onChange={(v) => setForm({ ...form, payment_method_id: v })} items={methods ?? []} placeholder="Selecione" />
+                </Field>
+                <Field label="Pessoa (opcional)">
+                  <Picker value={form.person_id} onChange={(v) => setForm({ ...form, person_id: v })} items={people ?? []} placeholder="Selecione" />
+                </Field>
+              </div>
+            </>
+          )}
+          {movType === "despesa" && (
             <div className="grid grid-cols-2 gap-3">
               <Field label="Cartão (opcional)">
                 <Picker value={form.card_id} onChange={(v) => setForm({ ...form, card_id: v })} items={cards ?? []} placeholder="Selecione" />
@@ -189,7 +245,7 @@ export function TransactionDialog({
           </Field>
           <div className="flex items-center justify-between rounded-xl border border-border p-3">
             <div>
-              <p className="text-sm font-medium">{type === "receita" ? "Recebido" : "Pago"}</p>
+              <p className="text-sm font-medium">{movType === "receita" ? "Recebido" : movType === "transferencia" ? "Efetivada" : "Pago"}</p>
               <p className="text-xs text-muted-foreground">Afeta o saldo da conta quando marcado</p>
             </div>
             <Switch checked={form.is_paid} onCheckedChange={(v) => setForm({ ...form, is_paid: v })} />

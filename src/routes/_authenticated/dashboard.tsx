@@ -21,6 +21,7 @@ import {
   Landmark,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowLeftRight,
   AlertTriangle,
   CalendarClock,
   Target,
@@ -77,9 +78,10 @@ function Dashboard() {
     });
     const receitas = monthTxs.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
     const despesas = monthTxs.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+    const transferido = monthTxs.filter((t) => t.type === "transferencia").reduce((s, t) => s + Number(t.amount), 0);
     const saldo = (accounts ?? []).reduce((s, a) => s + Number(a.current_balance), 0);
     const invest = (investments ?? []).reduce((s, i) => s + Number(i.current_value), 0);
-    return { receitas, despesas, economia: receitas - despesas, saldo, patrimonio: saldo + invest };
+    return { receitas, despesas, transferido, economia: receitas - despesas, saldo, patrimonio: saldo + invest };
   }, [transactions, accounts, investments, now]);
 
   const monthlyChart = useMemo(() => {
@@ -156,7 +158,7 @@ function Dashboard() {
           <StatCard icon={Wallet} label="Saldo atual" value={metrics.saldo} hidden={hidden} />
           <StatCard icon={TrendingUp} label="Receitas do mês" value={metrics.receitas} tone="income" hidden={hidden} />
           <StatCard icon={TrendingDown} label="Despesas do mês" value={metrics.despesas} tone="expense" hidden={hidden} />
-          <StatCard icon={PiggyBank} label="Economia do mês" value={metrics.economia} tone={metrics.economia >= 0 ? "income" : "expense"} hidden={hidden} />
+          <StatCard icon={ArrowLeftRight} label="Transferido/Reservado" value={metrics.transferido} hidden={hidden} />
           <StatCard icon={Landmark} label="Patrimônio total" value={metrics.patrimonio} highlight hidden={hidden} />
         </div>
       )}
@@ -188,15 +190,15 @@ function Dashboard() {
                     <div key={t.id} className="px-5 py-3 flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="size-9 rounded-xl grid place-items-center shrink-0" style={{ backgroundColor: (cat?.color ?? "#64748b") + "22", color: cat?.color ?? "#64748b" }}>
-                          {t.type === "receita" ? <ArrowUpRight className="size-4" /> : <ArrowDownRight className="size-4" />}
+                          {t.type === "receita" ? <ArrowUpRight className="size-4" /> : t.type === "transferencia" ? <ArrowLeftRight className="size-4" /> : <ArrowDownRight className="size-4" />}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">{t.description || cat?.name || "Lançamento"}</p>
                           <p className="text-xs text-muted-foreground truncate">{cat?.name ?? "Sem categoria"} • {formatDateShort(t.date)}</p>
                         </div>
                       </div>
-                      <p className={`text-sm font-semibold tabular ${t.type === "receita" ? "text-income" : "text-expense"}`}>
-                        {t.type === "receita" ? "+" : "-"} {maskCurrency(Number(t.amount), hidden)}
+                      <p className={`text-sm font-semibold tabular ${t.type === "receita" ? "text-income" : t.type === "transferencia" ? "text-foreground" : "text-expense"}`}>
+                        {t.type === "receita" ? "+ " : t.type === "transferencia" ? "" : "- "}{maskCurrency(Number(t.amount), hidden)}
                       </p>
                     </div>
                   );

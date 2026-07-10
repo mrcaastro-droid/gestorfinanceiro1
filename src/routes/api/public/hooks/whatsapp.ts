@@ -143,13 +143,15 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
             .eq("user_id", userId)
             .gte("date", start)
             .lte("date", end);
-          let receitas = 0, despesas = 0;
+          let receitas = 0, despesas = 0, transferido = 0;
           for (const t of (txs ?? []) as Row[]) {
             if (t.type === "receita") receitas += Number(t.amount);
+            else if (t.type === "transferencia") transferido += Number(t.amount);
             else despesas += Number(t.amount);
           }
+          const transfLine = transferido > 0 ? `\n🔄 Transferido/Reservado: ${brl(transferido)}` : "";
           return twiml(
-            `📊 *Resumo do mês*\n\n🟢 Receitas: ${brl(receitas)}\n🔴 Despesas: ${brl(despesas)}\n💰 Saldo: ${brl(receitas - despesas)}`,
+            `📊 *Resumo do mês*\n\n🟢 Receitas: ${brl(receitas)}\n🔴 Despesas: ${brl(despesas)}${transfLine}\n💰 Saldo: ${brl(receitas - despesas)}`,
           );
         }
 

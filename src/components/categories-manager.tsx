@@ -10,18 +10,20 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useList, useUpsert, useRemove, type CategoryRow } from "@/lib/finance";
 import { Plus, Pencil, Trash2, Tag, ChevronRight, CornerDownRight } from "lucide-react";
 
-type TypeValue = "receita" | "despesa" | "ambos";
+type TypeValue = "receita" | "despesa" | "ambos" | "transferencia";
 
 const TYPE_OPTIONS: Array<{ value: TypeValue; label: string }> = [
   { value: "receita", label: "Receita" },
   { value: "despesa", label: "Despesa" },
   { value: "ambos", label: "Ambos" },
+  { value: "transferencia", label: "Transferência" },
 ];
 
 const TYPE_LABEL: Record<string, string> = {
   receita: "Receita",
   despesa: "Despesa",
   ambos: "Ambos",
+  transferencia: "Transferência",
 };
 
 interface FormState {
