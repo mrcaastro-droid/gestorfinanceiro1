@@ -855,7 +855,7 @@ export type Database = {
         | "dinheiro"
         | "investimento"
         | "outro"
-      category_type: "receita" | "despesa" | "ambos"
+      category_type: "receita" | "despesa" | "ambos" | "transferencia"
       person_type: "cliente" | "empresa" | "pessoa_fisica" | "outro"
       recurrence_frequency:
         | "semanal"
@@ -864,7 +864,7 @@ export type Database = {
         | "trimestral"
         | "semestral"
         | "anual"
-      transaction_type: "receita" | "despesa"
+      transaction_type: "receita" | "despesa" | "transferencia"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1000,7 +1000,7 @@ export const Constants = {
         "investimento",
         "outro",
       ],
-      category_type: ["receita", "despesa", "ambos"],
+      category_type: ["receita", "despesa", "ambos", "transferencia"],
       person_type: ["cliente", "empresa", "pessoa_fisica", "outro"],
       recurrence_frequency: [
         "semanal",
@@ -1010,7 +1010,7 @@ export const Constants = {
         "semestral",
         "anual",
       ],
-      transaction_type: ["receita", "despesa"],
+      transaction_type: ["receita", "despesa", "transferencia"],
     },
   },
 } as const
