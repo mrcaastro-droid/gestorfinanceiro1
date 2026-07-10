@@ -177,15 +177,17 @@ function ReportsPage() {
               <SelectItem value="todos">Tudo</SelectItem>
               <SelectItem value="despesa">Despesas</SelectItem>
               <SelectItem value="receita">Receitas</SelectItem>
+              <SelectItem value="transferencia">Transferências</SelectItem>
             </SelectContent>
           </Select>
         </FilterField>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <KpiCard icon={ArrowUpRight} label="Receitas" value={totals.rec} tone="income" />
         <KpiCard icon={ArrowDownRight} label="Despesas" value={totals.exp} tone="expense" />
+        <KpiCard icon={ArrowLeftRight} label="Transferido" value={totals.transf} tone="neutral" />
         <KpiCard icon={Scale} label="Saldo" value={totals.saldo} tone={totals.saldo >= 0 ? "income" : "expense"} />
         <KpiCard icon={PiggyBank} label="Taxa de economia" value={totals.rate} tone="neutral" isPercent />
       </div>
