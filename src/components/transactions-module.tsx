@@ -22,12 +22,21 @@ import {
   TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowLeftRight,
   MoreVertical,
   X,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
+type MovType = "receita" | "despesa" | "transferencia";
+
+const MOV_CONFIG = {
+  receita: { title: "Receitas", singular: "receita", Icon: TrendingUp, RowIcon: ArrowUpRight, tone: "text-income", sign: "+" },
+  despesa: { title: "Despesas", singular: "despesa", Icon: TrendingDown, RowIcon: ArrowDownRight, tone: "text-expense", sign: "-" },
+  transferencia: { title: "Transferências", singular: "transferência", Icon: ArrowLeftRight, RowIcon: ArrowLeftRight, tone: "text-foreground", sign: "" },
+} as const;
+
+export function TransactionsModule({ type }: { type: MovType }) {
   const qc = useQueryClient();
   const { data: transactions, isLoading } = useList<TransactionRow>("transactions", { orderBy: "date" });
   const { data: categories } = useList<CategoryRow>("categories");
@@ -81,7 +90,9 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
   }, [transactions, type, search, catFilter, accFilter, yearFilter, monthFilter, statusFilter, sort, catMap]);
 
   const total = rows.reduce((s, t) => s + Number(t.amount), 0);
-  const cats = (categories ?? []).filter((c) => c.type === type || c.type === "ambos");
+  const cats = (categories ?? []).filter((c) =>
+    type === "transferencia" ? c.type === "transferencia" : c.type === type || c.type === "ambos",
+  );
 
   async function duplicate(t: TransactionRow) {
     const { id, installment_group, installment_number, installment_total, ...rest } = t;
@@ -96,13 +107,14 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
     toast.success("Lançamento duplicado");
   }
 
+  const cfg = MOV_CONFIG[type];
   const isReceita = type === "receita";
-  const Icon = isReceita ? TrendingUp : TrendingDown;
+  const Icon = cfg.Icon;
 
   return (
     <PageContainer>
       <PageHeader
-        title={isReceita ? "Receitas" : "Despesas"}
+        title={cfg.title}
         description={`${rows.length} lançamento(s) • Total ${formatCurrency(total)}`}
         actions={
           <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
@@ -182,32 +194,35 @@ export function TransactionsModule({ type }: { type: "receita" | "despesa" }) {
         ) : rows.length === 0 ? (
           <EmptyState
             icon={Icon}
-            title={`Nenhuma ${isReceita ? "receita" : "despesa"} encontrada`}
+            title={`Nenhuma ${cfg.singular} encontrada`}
             description="Comece adicionando seu primeiro lançamento."
-            action={<Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Nova {isReceita ? "receita" : "despesa"}</Button>}
+            action={<Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Nova {cfg.singular}</Button>}
           />
         ) : (
           <div className="divide-y divide-border">
             {rows.map((t) => {
               const cat = t.category_id ? catMap.get(t.category_id) : null;
               const acc = t.account_id ? accMap.get(t.account_id) : null;
+              const destAcc = t.transfer_account_id ? accMap.get(t.transfer_account_id) : null;
               return (
                 <div key={t.id} className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-accent/40 transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="size-10 rounded-xl grid place-items-center shrink-0" style={{ backgroundColor: (cat?.color ?? "#64748b") + "22", color: cat?.color ?? "#64748b" }}>
-                      {isReceita ? <ArrowUpRight className="size-5" /> : <ArrowDownRight className="size-5" />}
+                      <cfg.RowIcon className="size-5" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{t.description || cat?.name || "Lançamento"}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {cat?.name ?? "Sem categoria"} • {acc?.name ?? "Sem conta"} • {formatDate(t.date)}
+                        {type === "transferencia"
+                          ? `${acc?.name ?? "?"} → ${destAcc?.name ?? "?"}`
+                          : `${cat?.name ?? "Sem categoria"} • ${acc?.name ?? "Sem conta"}`} • {formatDate(t.date)}
                         {!t.is_paid && <span className="text-amber-500"> • Pendente</span>}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <p className={`text-sm font-semibold tabular ${isReceita ? "text-income" : "text-expense"}`}>
-                      {isReceita ? "+" : "-"} {formatCurrency(Number(t.amount))}
+                    <p className={`text-sm font-semibold tabular ${cfg.tone}`}>
+                      {cfg.sign} {formatCurrency(Number(t.amount))}
                     </p>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
