@@ -190,15 +190,15 @@ function Dashboard() {
                     <div key={t.id} className="px-5 py-3 flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="size-9 rounded-xl grid place-items-center shrink-0" style={{ backgroundColor: (cat?.color ?? "#64748b") + "22", color: cat?.color ?? "#64748b" }}>
-                          {t.type === "receita" ? <ArrowUpRight className="size-4" /> : <ArrowDownRight className="size-4" />}
+                          {t.type === "receita" ? <ArrowUpRight className="size-4" /> : t.type === "transferencia" ? <ArrowLeftRight className="size-4" /> : <ArrowDownRight className="size-4" />}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">{t.description || cat?.name || "Lançamento"}</p>
                           <p className="text-xs text-muted-foreground truncate">{cat?.name ?? "Sem categoria"} • {formatDateShort(t.date)}</p>
                         </div>
                       </div>
-                      <p className={`text-sm font-semibold tabular ${t.type === "receita" ? "text-income" : "text-expense"}`}>
-                        {t.type === "receita" ? "+" : "-"} {maskCurrency(Number(t.amount), hidden)}
+                      <p className={`text-sm font-semibold tabular ${t.type === "receita" ? "text-income" : t.type === "transferencia" ? "text-foreground" : "text-expense"}`}>
+                        {t.type === "receita" ? "+ " : t.type === "transferencia" ? "" : "- "}{maskCurrency(Number(t.amount), hidden)}
                       </p>
                     </div>
                   );
