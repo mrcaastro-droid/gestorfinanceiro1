@@ -270,7 +270,7 @@ function ReportsPage() {
       {/* Despesas por subcategoria */}
       <div className="bg-card border border-border rounded-2xl p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">{type === "receita" ? "Receitas" : "Despesas"} por subcategoria</h3>
+          <h3 className="font-semibold">{breakdownLabel} por subcategoria</h3>
           <span className="text-sm text-muted-foreground tabular">{formatCurrency(subTotal)}</span>
         </div>
         {bySubcategory.length === 0 ? (
