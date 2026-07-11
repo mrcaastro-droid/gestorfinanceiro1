@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { useHideValues, maskCurrency } from "@/lib/hide-values";
 import { Target, Plus, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
