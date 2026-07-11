@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SimpleCrud } from "@/components/simple-crud";
-import { formatCurrency } from "@/lib/format";
+import { Currency } from "@/lib/hide-values";
 import { Wallet } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/contas")({
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/contas")({
       renderItem={(row) => (
         <div>
           <p className="text-sm font-medium truncate">{String(row.name)}</p>
-          <p className="text-xs text-muted-foreground">Saldo atual: {formatCurrency(Number(row.current_balance))}</p>
+          <p className="text-xs text-muted-foreground">Saldo atual: <Currency value={Number(row.current_balance)} /></p>
         </div>
       )}
     />
