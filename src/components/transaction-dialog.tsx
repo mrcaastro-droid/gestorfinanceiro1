@@ -37,6 +37,8 @@ export function TransactionDialog({
 
   const [busy, setBusy] = useState(false);
   const [movType, setMovType] = useState<MovType>(type);
+  const [catParent, setCatParent] = useState<string>(NONE);
+  const [catChild, setCatChild] = useState<string>(NONE);
   const [form, setForm] = useState({
     amount: "",
     date: todayISO(),
@@ -56,6 +58,14 @@ export function TransactionDialog({
     if (open) {
       if (editing) {
         setMovType(editing.type);
+        const cat = editing.category_id ? (categories ?? []).find((c) => c.id === editing.category_id) : null;
+        if (cat?.parent_id) {
+          setCatParent(cat.parent_id);
+          setCatChild(cat.id);
+        } else {
+          setCatParent(editing.category_id ?? NONE);
+          setCatChild(NONE);
+        }
         setForm({
           amount: String(editing.amount),
           date: editing.date,
@@ -72,24 +82,29 @@ export function TransactionDialog({
         });
       } else {
         setMovType(type);
+        setCatParent(NONE);
+        setCatChild(NONE);
         setForm((f) => ({ ...f, amount: "", description: "", notes: "", date: todayISO(), installments: 1, transfer_account_id: NONE }));
       }
     }
-  }, [open, editing, type]);
+  }, [open, editing, type, categories]);
 
   const isTransfer = movType === "transferencia";
   const catsRaw = (categories ?? []).filter((c) =>
     isTransfer ? c.type === "transferencia" : c.type === movType || c.type === "ambos",
   );
-  const cats = catsRaw
-    .filter((c) => !c.parent_id)
-    .flatMap((parent) => [
-      { id: parent.id, name: parent.name },
-      ...catsRaw
-        .filter((c) => c.parent_id === parent.id)
-        .map((child) => ({ id: child.id, name: `   ↳ ${child.name}` })),
-    ])
-    .concat(catsRaw.filter((c) => c.parent_id && !catsRaw.some((p) => p.id === c.parent_id)).map((c) => ({ id: c.id, name: c.name })));
+  const parentCats = catsRaw.filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: c.name }));
+  const childCats = catsRaw.filter((c) => c.parent_id === catParent).map((c) => ({ id: c.id, name: c.name }));
+
+  function selectParent(v: string) {
+    setCatParent(v);
+    setCatChild(NONE);
+  }
+  function selectType(v: MovType) {
+    setMovType(v);
+    setCatParent(NONE);
+    setCatChild(NONE);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -106,7 +121,7 @@ export function TransactionDialog({
         type: movType,
         description: form.description || null,
         notes: form.notes || null,
-        category_id: form.category_id === NONE ? null : form.category_id,
+        category_id: catChild !== NONE ? catChild : catParent === NONE ? null : catParent,
         account_id: form.account_id === NONE ? null : form.account_id,
         transfer_account_id: isTransfer ? (form.transfer_account_id === NONE ? null : form.transfer_account_id) : null,
         card_id: isTransfer ? null : form.card_id === NONE ? null : form.card_id,
