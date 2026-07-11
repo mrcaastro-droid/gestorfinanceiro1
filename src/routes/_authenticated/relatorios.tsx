@@ -327,8 +327,8 @@ function FilterField({ label, children }: { label: string; children: React.React
   );
 }
 
-function KpiCard({ icon: Icon, label, value, tone, isPercent }: {
-  icon: typeof ArrowUpRight; label: string; value: number; tone: "income" | "expense" | "neutral"; isPercent?: boolean;
+function KpiCard({ icon: Icon, label, value, tone, isPercent, hidden }: {
+  icon: typeof ArrowUpRight; label: string; value: number; tone: "income" | "expense" | "neutral"; isPercent?: boolean; hidden?: boolean;
 }) {
   return (
     <div className="bg-card border border-border rounded-2xl p-5">
@@ -343,7 +343,7 @@ function KpiCard({ icon: Icon, label, value, tone, isPercent }: {
       </div>
       <p className={cn("text-xl font-bold tabular",
         tone === "income" && "text-income", tone === "expense" && "text-expense")}>
-        {isPercent ? `${value.toFixed(0)}%` : formatCurrency(value)}
+        {isPercent ? `${value.toFixed(0)}%` : maskCurrency(value, !!hidden)}
       </p>
     </div>
   );
