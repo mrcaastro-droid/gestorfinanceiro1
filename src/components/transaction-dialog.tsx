@@ -187,7 +187,7 @@ export function TransactionDialog({
                 <button
                   type="button"
                   key={opt.v}
-                  onClick={() => setMovType(opt.v)}
+                  onClick={() => selectType(opt.v)}
                   className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-medium transition-colors ${
                     active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-accent"
                   }`}
@@ -220,19 +220,29 @@ export function TransactionDialog({
                 </Field>
               </div>
               <Field label="Categoria (reserva/investimento)">
-                <Picker value={form.category_id} onChange={(v) => setForm({ ...form, category_id: v })} items={cats} placeholder="Selecione" />
+                <Picker value={catParent} onChange={selectParent} items={parentCats} placeholder="Selecione" />
               </Field>
+              {childCats.length > 0 && (
+                <Field label="Subcategoria (opcional)">
+                  <Picker value={catChild} onChange={setCatChild} items={childCats} placeholder="Selecione" />
+                </Field>
+              )}
             </>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Categoria">
-                  <Picker value={form.category_id} onChange={(v) => setForm({ ...form, category_id: v })} items={cats} placeholder="Selecione" />
+                  <Picker value={catParent} onChange={selectParent} items={parentCats} placeholder="Selecione" />
                 </Field>
                 <Field label="Conta">
                   <Picker value={form.account_id} onChange={(v) => setForm({ ...form, account_id: v })} items={accounts ?? []} placeholder="Selecione" />
                 </Field>
               </div>
+              {childCats.length > 0 && (
+                <Field label="Subcategoria">
+                  <Picker value={catChild} onChange={setCatChild} items={childCats} placeholder="Selecione (opcional)" />
+                </Field>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <Field label={movType === "receita" ? "Forma de recebimento" : "Forma de pagamento"}>
                   <Picker value={form.payment_method_id} onChange={(v) => setForm({ ...form, payment_method_id: v })} items={methods ?? []} placeholder="Selecione" />
