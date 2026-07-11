@@ -25,12 +25,11 @@ import {
   AlertTriangle,
   CalendarClock,
   Target,
-  Eye,
-  EyeOff,
 } from "lucide-react";
 import { PageContainer, PageHeader } from "@/components/app-shell";
 import { useList, useAutoGenerateRecurring, type TransactionRow, type AccountRow, type CategoryRow, type GoalRow, type InvestmentRow } from "@/lib/finance";
 import { formatCurrency, formatDateShort } from "@/lib/format";
+import { useHideValues, maskCurrency } from "@/lib/hide-values";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -40,24 +39,6 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-function useHideValues() {
-  const [hidden, setHidden] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem("dashboard.hide-values") === "true";
-  });
-  useEffect(() => {
-    window.localStorage.setItem("dashboard.hide-values", String(hidden));
-  }, [hidden]);
-  return { hidden, toggle: () => setHidden((v) => !v) };
-}
-
-function maskCurrency(value: number, hidden: boolean) {
-  if (!hidden) return formatCurrency(value);
-  const formatted = formatCurrency(value);
-  const digits = formatted.replace(/\D/g, "").length;
-  return "R$ " + "•".repeat(Math.max(4, digits));
-}
-
 function Dashboard() {
   useAutoGenerateRecurring();
   const { data: transactions, isLoading } = useList<TransactionRow>("transactions", { orderBy: "date" });
@@ -65,7 +46,7 @@ function Dashboard() {
   const { data: categories } = useList<CategoryRow>("categories");
   const { data: goals } = useList<GoalRow>("goals");
   const { data: investments } = useList<InvestmentRow>("investments");
-  const { hidden, toggle } = useHideValues();
+  const { hidden } = useHideValues();
 
   const now = new Date();
   const catMap = useMemo(() => new Map((categories ?? []).map((c) => [c.id, c])), [categories]);
@@ -78,7 +59,8 @@ function Dashboard() {
     });
     const receitas = monthTxs.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
     const despesas = monthTxs.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
-    const transferido = monthTxs.filter((t) => t.type === "transferencia").reduce((s, t) => s + Number(t.amount), 0);
+    // Total reservado/transferido acumulado (todas as transferências, não só do mês).
+    const transferido = txs.filter((t) => t.type === "transferencia").reduce((s, t) => s + Number(t.amount), 0);
     const saldo = (accounts ?? []).reduce((s, a) => s + Number(a.current_balance), 0);
     const invest = (investments ?? []).reduce((s, i) => s + Number(i.current_value), 0);
     return { receitas, despesas, transferido, economia: receitas - despesas, saldo, patrimonio: saldo + invest };
@@ -134,17 +116,6 @@ function Dashboard() {
       <PageHeader
         title="Visão Geral"
         description="Seu panorama financeiro do mês"
-        actions={
-          <button
-            onClick={toggle}
-            className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-border bg-card hover:bg-accent transition-colors"
-            aria-label={hidden ? "Mostrar valores" : "Ocultar valores"}
-            title={hidden ? "Mostrar valores" : "Ocultar valores"}
-          >
-            {hidden ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-            <span className="hidden sm:inline">{hidden ? "Mostrar" : "Ocultar"}</span>
-          </button>
-        }
       />
 
       {isLoading ? (
