@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageContainer, PageHeader } from "@/components/app-shell";
 import { useList, type TransactionRow, type CategoryRow, type AccountRow } from "@/lib/finance";
-import { formatCurrency, formatCompact } from "@/lib/format";
+import { formatCompact } from "@/lib/format";
 import { useMemo, useState } from "react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
