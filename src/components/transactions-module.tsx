@@ -10,7 +10,7 @@ import { TransactionDialog } from "@/components/transaction-dialog";
 import { useList, useRemove, type TransactionRow, type CategoryRow, type AccountRow } from "@/lib/finance";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { useHideValues, maskCurrency } from "@/lib/hide-values";
 import { toast } from "sonner";
 import {
