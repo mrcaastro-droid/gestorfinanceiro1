@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SimpleCrud } from "@/components/simple-crud";
-import { formatCurrency } from "@/lib/format";
+import { Currency } from "@/lib/hide-values";
 import { LineChart } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/investimentos")({
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/investimentos")({
           <div>
             <p className="text-sm font-medium truncate">{String(row.name)} {row.ticker ? `• ${row.ticker}` : ""}</p>
             <p className="text-xs text-muted-foreground">
-              {formatCurrency(current)} • <span className={rent >= 0 ? "text-income" : "text-expense"}>{rent >= 0 ? "+" : ""}{rent.toFixed(2)}%</span>
+              <Currency value={current} /> • <span className={rent >= 0 ? "text-income" : "text-expense"}>{rent >= 0 ? "+" : ""}{rent.toFixed(2)}%</span>
             </p>
           </div>
         );

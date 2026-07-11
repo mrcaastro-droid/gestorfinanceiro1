@@ -8,13 +8,15 @@ import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import { useHideValues, maskCurrency } from "@/lib/hide-values";
 import { Target, Plus, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/metas")({ component: MetasPage });
 
 function MetasPage() {
+  const { hidden } = useHideValues();
   const { data: goals } = useList<GoalRow>("goals");
   const upsert = useUpsert("goals");
   const remove = useRemove("goals");
@@ -62,8 +64,8 @@ function MetasPage() {
                 </div>
                 <Progress value={pct} className="mb-2" />
                 <div className="flex justify-between text-sm">
-                  <span className="tabular font-medium">{formatCurrency(g.current_amount)}</span>
-                  <span className="text-muted-foreground tabular">{formatCurrency(g.target_amount)}</span>
+                  <span className="tabular font-medium">{maskCurrency(g.current_amount, hidden)}</span>
+                  <span className="text-muted-foreground tabular">{maskCurrency(g.target_amount, hidden)}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">{pct}% concluído{g.target_date ? ` • até ${formatDate(g.target_date)}` : ""}</p>
               </div>

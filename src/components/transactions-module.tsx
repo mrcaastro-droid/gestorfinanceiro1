@@ -10,7 +10,8 @@ import { TransactionDialog } from "@/components/transaction-dialog";
 import { useList, useRemove, type TransactionRow, type CategoryRow, type AccountRow } from "@/lib/finance";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import { useHideValues, maskCurrency } from "@/lib/hide-values";
 import { toast } from "sonner";
 import {
   Plus,
@@ -38,6 +39,7 @@ const MOV_CONFIG = {
 
 export function TransactionsModule({ type }: { type: MovType }) {
   const qc = useQueryClient();
+  const { hidden } = useHideValues();
   const { data: transactions, isLoading } = useList<TransactionRow>("transactions", { orderBy: "date" });
   const { data: categories } = useList<CategoryRow>("categories");
   const { data: accounts } = useList<AccountRow>("accounts");
@@ -114,7 +116,7 @@ export function TransactionsModule({ type }: { type: MovType }) {
     <PageContainer>
       <PageHeader
         title={cfg.title}
-        description={`${rows.length} lançamento(s) • Total ${formatCurrency(total)}`}
+        description={`${rows.length} lançamento(s) • Total ${maskCurrency(total, hidden)}`}
         actions={
           <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
             <Plus className="size-4" /> Nova
@@ -221,7 +223,7 @@ export function TransactionsModule({ type }: { type: MovType }) {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <p className={`text-sm font-semibold tabular ${cfg.tone}`}>
-                      {cfg.sign} {formatCurrency(Number(t.amount))}
+                      {cfg.sign} {maskCurrency(Number(t.amount), hidden)}
                     </p>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

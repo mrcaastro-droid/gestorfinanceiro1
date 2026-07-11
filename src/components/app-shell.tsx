@@ -6,7 +6,8 @@ import { useTheme } from "@/lib/theme";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { initials } from "@/lib/format";
-import { Wallet, Menu, Moon, Sun, LogOut, MoreHorizontal } from "lucide-react";
+import { Wallet, Menu, Moon, Sun, LogOut, MoreHorizontal, Eye, EyeOff } from "lucide-react";
+import { useHideValues } from "@/lib/hide-values";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +15,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { hidden, toggle: toggleHidden } = useHideValues();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -75,6 +77,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
             <button
+              onClick={toggleHidden}
+              className="size-8 grid place-items-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent"
+              aria-label={hidden ? "Mostrar valores" : "Ocultar valores"}
+              title={hidden ? "Mostrar valores" : "Ocultar valores"}
+            >
+              {hidden ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+            </button>
+            <button
               onClick={handleSignOut}
               className="size-8 grid place-items-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-accent"
               aria-label="Sair"
@@ -94,6 +104,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="font-bold tracking-tight">Gestor Financeiro</span>
         </Link>
         <div className="flex items-center gap-1">
+          <button
+            onClick={toggleHidden}
+            className="size-9 grid place-items-center rounded-lg text-muted-foreground"
+            aria-label={hidden ? "Mostrar valores" : "Ocultar valores"}
+          >
+            {hidden ? <Eye className="size-5" /> : <EyeOff className="size-5" />}
+          </button>
           <button onClick={toggleTheme} className="size-9 grid place-items-center rounded-lg text-muted-foreground" aria-label="Alternar tema">
             {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </button>
