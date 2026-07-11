@@ -10,6 +10,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowDownRight, ArrowUpRight, Scale, PiggyBank, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useHideValues, maskCurrency } from "@/lib/hide-values";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({ component: ReportsPage });
 
@@ -20,6 +21,7 @@ const PALETTE = ["#10b981", "#6366f1", "#f43f5e", "#f59e0b", "#0ea5e9", "#a855f7
 type TypeFilter = "todos" | "despesa" | "receita" | "transferencia";
 
 function ReportsPage() {
+  const { hidden } = useHideValues();
   const { data: transactions } = useList<TransactionRow>("transactions", { orderBy: "date" });
   const { data: categories } = useList<CategoryRow>("categories");
   const { data: accounts } = useList<AccountRow>("accounts");
@@ -185,10 +187,10 @@ function ReportsPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <KpiCard icon={ArrowUpRight} label="Receitas" value={totals.rec} tone="income" />
-        <KpiCard icon={ArrowDownRight} label="Despesas" value={totals.exp} tone="expense" />
-        <KpiCard icon={ArrowLeftRight} label="Transferido" value={totals.transf} tone="neutral" />
-        <KpiCard icon={Scale} label="Saldo" value={totals.saldo} tone={totals.saldo >= 0 ? "income" : "expense"} />
+        <KpiCard icon={ArrowUpRight} label="Receitas" value={totals.rec} tone="income" hidden={hidden} />
+        <KpiCard icon={ArrowDownRight} label="Despesas" value={totals.exp} tone="expense" hidden={hidden} />
+        <KpiCard icon={ArrowLeftRight} label="Transferido" value={totals.transf} tone="neutral" hidden={hidden} />
+        <KpiCard icon={Scale} label="Saldo" value={totals.saldo} tone={totals.saldo >= 0 ? "income" : "expense"} hidden={hidden} />
         <KpiCard icon={PiggyBank} label="Taxa de economia" value={totals.rate} tone="neutral" isPercent />
       </div>
 
@@ -199,33 +201,15 @@ function ReportsPage() {
           <BarChart data={monthly}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-20" vertical={false} />
             <XAxis dataKey="mes" fontSize={11} tickLine={false} axisLine={false} />
-            <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatCompact(Number(v))} />
-            <Tooltip formatter={(v: number) => formatCurrency(Number(v))} cursor={{ fill: "var(--muted)", opacity: 0.3 }} contentStyle={tooltipStyle} />
+            <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => (hidden ? "•••" : formatCompact(Number(v)))} />
+            <Tooltip formatter={(v: number) => maskCurrency(Number(v), hidden)} cursor={{ fill: "var(--muted)", opacity: 0.3 }} contentStyle={tooltipStyle} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Bar dataKey="Receitas" fill="var(--income)" radius={[4, 4, 0, 0]} />
             <Bar dataKey="Despesas" fill="var(--expense)" radius={[4, 4, 0, 0]} />
+            {hasTransfers && <Bar dataKey="Transferido" fill="var(--primary)" radius={[4, 4, 0, 0]} />}
           </BarChart>
         </ResponsiveContainer>
       </div>
-
-      {/* Transferências / Reservas por mês */}
-      {hasTransfers && (
-        <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Transferências / Reservas por mês — {year}</h3>
-            <span className="text-sm text-muted-foreground tabular">{formatCurrency(totals.transf)}</span>
-          </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={monthly}>
-              <CartesianGrid strokeDasharray="3 3" className="opacity-20" vertical={false} />
-              <XAxis dataKey="mes" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatCompact(Number(v))} />
-              <Tooltip formatter={(v: number) => formatCurrency(Number(v))} cursor={{ fill: "var(--muted)", opacity: 0.3 }} contentStyle={tooltipStyle} />
-              <Bar dataKey="Transferido" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Donut por categoria */}
