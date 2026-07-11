@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SimpleCrud } from "@/components/simple-crud";
-import { formatCurrency } from "@/lib/format";
+import { Currency } from "@/lib/hide-values";
 import { CreditCard } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cartoes")({
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/cartoes")({
       renderItem={(row) => (
         <div>
           <p className="text-sm font-medium truncate">{String(row.name)} {row.brand ? `• ${row.brand}` : ""}</p>
-          <p className="text-xs text-muted-foreground">Limite: {formatCurrency(Number(row.limit_amount))} • Vence dia {String(row.due_day)}</p>
+          <p className="text-xs text-muted-foreground">Limite: <Currency value={Number(row.limit_amount)} /> • Vence dia {String(row.due_day)}</p>
         </div>
       )}
     />
