@@ -1,17 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SimpleCrud } from "@/components/simple-crud";
+import { PageContainer, PageHeader } from "@/components/app-shell";
+import { ReservesPanel } from "@/components/reserves-panel";
 import { Currency } from "@/lib/hide-values";
 import { LineChart } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/investimentos")({
   component: () => (
-    <SimpleCrud
-      table="investments"
-      title="Investimentos"
-      description="Sua carteira de investimentos"
-      singular="Investimento"
-      icon={LineChart}
-      fields={[
+    <PageContainer>
+      <PageHeader title="Investimentos e Reservas" description="Dinheiro guardado e sua carteira" />
+      <ReservesPanel />
+      <SimpleCrud
+        embedded
+        table="investments"
+        title="Investimentos"
+        description="Sua carteira de investimentos"
+        singular="Investimento"
+        icon={LineChart}
+        fields={[
         { name: "name", label: "Nome" },
         { name: "ticker", label: "Ticker", optional: true },
         { name: "type_id", label: "Tipo", type: "select", optionsFrom: "investment_types", optional: true },
@@ -20,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/investimentos")({
         { name: "avg_price", label: "Preço médio", type: "number", default: 0 },
         { name: "current_value", label: "Valor atual (R$)", type: "number", default: 0 },
       ]}
-      renderItem={(row) => {
+        renderItem={(row) => {
         const invested = Number(row.invested_amount);
         const current = Number(row.current_value);
         const rent = invested > 0 ? ((current - invested) / invested) * 100 : 0;
@@ -33,6 +39,7 @@ export const Route = createFileRoute("/_authenticated/investimentos")({
           </div>
         );
       }}
-    />
+      />
+    </PageContainer>
   ),
 });

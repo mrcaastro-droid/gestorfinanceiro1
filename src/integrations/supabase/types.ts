@@ -658,6 +658,7 @@ export type Database = {
           installment_number: number | null
           installment_total: number | null
           is_paid: boolean
+          is_reserve_withdrawal: boolean
           notes: string | null
           payment_method_id: string | null
           person_id: string | null
@@ -680,6 +681,7 @@ export type Database = {
           installment_number?: number | null
           installment_total?: number | null
           is_paid?: boolean
+          is_reserve_withdrawal?: boolean
           notes?: string | null
           payment_method_id?: string | null
           person_id?: string | null
@@ -702,6 +704,7 @@ export type Database = {
           installment_number?: number | null
           installment_total?: number | null
           is_paid?: boolean
+          is_reserve_withdrawal?: boolean
           notes?: string | null
           payment_method_id?: string | null
           person_id?: string | null

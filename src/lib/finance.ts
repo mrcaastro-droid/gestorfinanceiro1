@@ -141,6 +141,7 @@ export interface TransactionRow {
   installment_group: string | null;
   installment_number: number | null;
   installment_total: number | null;
+  is_reserve_withdrawal?: boolean;
 }
 
 export interface AccountRow {
