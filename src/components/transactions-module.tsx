@@ -49,7 +49,7 @@ export function TransactionsModule({ type }: { type: MovType }) {
   const [editing, setEditing] = useState<TransactionRow | null>(null);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
-  const [accFilter, setAccFilter] = useState("all");
+  const [subFilter, setSubFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -57,6 +57,19 @@ export function TransactionsModule({ type }: { type: MovType }) {
 
   const catMap = useMemo(() => new Map((categories ?? []).map((c) => [c.id, c])), [categories]);
   const accMap = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a])), [accounts]);
+
+  const cats = useMemo(
+    () =>
+      (categories ?? []).filter((c) =>
+        type === "transferencia" ? c.type === "transferencia" : c.type === type || c.type === "ambos",
+      ),
+    [categories, type],
+  );
+  const parentCats = useMemo(() => cats.filter((c) => !c.parent_id), [cats]);
+  const subCats = useMemo(
+    () => (catFilter === "all" ? [] : cats.filter((c) => c.parent_id === catFilter)),
+    [cats, catFilter],
+  );
 
   const years = useMemo(() => {
     const set = new Set(
@@ -75,11 +88,20 @@ export function TransactionsModule({ type }: { type: MovType }) {
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(
-        (t) => (t.description ?? "").toLowerCase().includes(q) || (catMap.get(t.category_id ?? "")?.name ?? "").toLowerCase().includes(q),
+        (t) =>
+          (t.description ?? "").toLowerCase().includes(q) ||
+          (t.notes ?? "").toLowerCase().includes(q) ||
+          (catMap.get(t.category_id ?? "")?.name ?? "").toLowerCase().includes(q),
       );
     }
-    if (catFilter !== "all") list = list.filter((t) => t.category_id === catFilter);
-    if (accFilter !== "all") list = list.filter((t) => t.account_id === accFilter);
+    if (catFilter !== "all") {
+      list = list.filter((t) => {
+        if (t.category_id === catFilter) return true;
+        const parent = catMap.get(t.category_id ?? "")?.parent_id;
+        return parent === catFilter;
+      });
+    }
+    if (subFilter !== "all") list = list.filter((t) => t.category_id === subFilter);
     if (yearFilter !== "all") list = list.filter((t) => t.date.slice(0, 4) === yearFilter);
     if (monthFilter !== "all") list = list.filter((t) => t.date.slice(5, 7) === monthFilter);
     if (statusFilter !== "all") list = list.filter((t) => (statusFilter === "paid" ? t.is_paid : !t.is_paid));
@@ -89,12 +111,21 @@ export function TransactionsModule({ type }: { type: MovType }) {
       return a.date > b.date ? -1 : 1;
     });
     return list;
-  }, [transactions, type, search, catFilter, accFilter, yearFilter, monthFilter, statusFilter, sort, catMap]);
+  }, [transactions, type, search, catFilter, subFilter, yearFilter, monthFilter, statusFilter, sort, catMap]);
 
   const total = rows.reduce((s, t) => s + Number(t.amount), 0);
-  const cats = (categories ?? []).filter((c) =>
-    type === "transferencia" ? c.type === "transferencia" : c.type === type || c.type === "ambos",
-  );
+
+  const hasFilters =
+    catFilter !== "all" || subFilter !== "all" || yearFilter !== "all" || monthFilter !== "all" || statusFilter !== "all" || !!search;
+
+  function clearFilters() {
+    setSearch("");
+    setCatFilter("all");
+    setSubFilter("all");
+    setYearFilter("all");
+    setMonthFilter("all");
+    setStatusFilter("all");
+  }
 
   async function duplicate(t: TransactionRow) {
     const { id, installment_group, installment_number, installment_total, ...rest } = t;
