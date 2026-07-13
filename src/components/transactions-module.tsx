@@ -156,67 +156,69 @@ export function TransactionsModule({ type }: { type: MovType }) {
       />
 
       <div className="flex flex-col gap-3 mb-5">
-        <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." className="pl-9" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pesquisar por descrição, observação ou categoria..."
+            className="pl-9"
+          />
         </div>
-        <Select value={catFilter} onValueChange={setCatFilter}>
-          <SelectTrigger className="sm:w-44"><SelectValue placeholder="Categoria" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas categorias</SelectItem>
-            {cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={accFilter} onValueChange={setAccFilter}>
-          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Conta" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas contas</SelectItem>
-            {(accounts ?? []).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-        <Select value={yearFilter} onValueChange={setYearFilter}>
-          <SelectTrigger className="sm:w-32"><SelectValue placeholder="Ano" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos anos</SelectItem>
-            {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={monthFilter} onValueChange={setMonthFilter}>
-          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Mês" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos meses</SelectItem>
-            {monthNames.map((m, i) => (
-              <SelectItem key={m} value={String(i + 1).padStart(2, "0")}>{m}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Situação" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas situações</SelectItem>
-            <SelectItem value="paid">Pago</SelectItem>
-            <SelectItem value="pending">Pendente</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={sort} onValueChange={setSort}>
-          <SelectTrigger className="sm:w-36"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date">Data</SelectItem>
-            <SelectItem value="amount">Valor</SelectItem>
-            <SelectItem value="description">Descrição</SelectItem>
-          </SelectContent>
-        </Select>
-        {(catFilter !== "all" || accFilter !== "all" || yearFilter !== "all" || monthFilter !== "all" || statusFilter !== "all" || search) && (
-          <Button
-            variant="ghost"
-            onClick={() => { setSearch(""); setCatFilter("all"); setAccFilter("all"); setYearFilter("all"); setMonthFilter("all"); setStatusFilter("all"); }}
-          >
-            <X className="size-4" /> Limpar
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Select value={catFilter} onValueChange={(v) => { setCatFilter(v); setSubFilter("all"); }}>
+            <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Categoria" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {parentCats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {subCats.length > 0 && (
+            <Select value={subFilter} onValueChange={setSubFilter}>
+              <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Subcategoria" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas subcategorias</SelectItem>
+                {subCats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={yearFilter} onValueChange={setYearFilter}>
+            <SelectTrigger className="w-full sm:w-28"><SelectValue placeholder="Ano" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos anos</SelectItem>
+              {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Mês" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos meses</SelectItem>
+              {monthNames.map((m, i) => (
+                <SelectItem key={m} value={String(i + 1).padStart(2, "0")}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Situação" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas situações</SelectItem>
+              <SelectItem value="paid">Pago</SelectItem>
+              <SelectItem value="pending">Pendente</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sort} onValueChange={setSort}>
+            <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Ordenar: Data</SelectItem>
+              <SelectItem value="amount">Ordenar: Valor</SelectItem>
+              <SelectItem value="description">Ordenar: Descrição</SelectItem>
+            </SelectContent>
+          </Select>
+          {hasFilters && (
+            <Button variant="ghost" onClick={clearFilters}>
+              <X className="size-4" /> Limpar
+            </Button>
+          )}
         </div>
       </div>
 
