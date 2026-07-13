@@ -49,7 +49,7 @@ export function TransactionsModule({ type }: { type: MovType }) {
   const [editing, setEditing] = useState<TransactionRow | null>(null);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
-  const [accFilter, setAccFilter] = useState("all");
+  const [subFilter, setSubFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -57,6 +57,19 @@ export function TransactionsModule({ type }: { type: MovType }) {
 
   const catMap = useMemo(() => new Map((categories ?? []).map((c) => [c.id, c])), [categories]);
   const accMap = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a])), [accounts]);
+
+  const cats = useMemo(
+    () =>
+      (categories ?? []).filter((c) =>
+        type === "transferencia" ? c.type === "transferencia" : c.type === type || c.type === "ambos",
+      ),
+    [categories, type],
+  );
+  const parentCats = useMemo(() => cats.filter((c) => !c.parent_id), [cats]);
+  const subCats = useMemo(
+    () => (catFilter === "all" ? [] : cats.filter((c) => c.parent_id === catFilter)),
+    [cats, catFilter],
+  );
 
   const years = useMemo(() => {
     const set = new Set(
@@ -75,11 +88,20 @@ export function TransactionsModule({ type }: { type: MovType }) {
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(
-        (t) => (t.description ?? "").toLowerCase().includes(q) || (catMap.get(t.category_id ?? "")?.name ?? "").toLowerCase().includes(q),
+        (t) =>
+          (t.description ?? "").toLowerCase().includes(q) ||
+          (t.notes ?? "").toLowerCase().includes(q) ||
+          (catMap.get(t.category_id ?? "")?.name ?? "").toLowerCase().includes(q),
       );
     }
-    if (catFilter !== "all") list = list.filter((t) => t.category_id === catFilter);
-    if (accFilter !== "all") list = list.filter((t) => t.account_id === accFilter);
+    if (catFilter !== "all") {
+      list = list.filter((t) => {
+        if (t.category_id === catFilter) return true;
+        const parent = catMap.get(t.category_id ?? "")?.parent_id;
+        return parent === catFilter;
+      });
+    }
+    if (subFilter !== "all") list = list.filter((t) => t.category_id === subFilter);
     if (yearFilter !== "all") list = list.filter((t) => t.date.slice(0, 4) === yearFilter);
     if (monthFilter !== "all") list = list.filter((t) => t.date.slice(5, 7) === monthFilter);
     if (statusFilter !== "all") list = list.filter((t) => (statusFilter === "paid" ? t.is_paid : !t.is_paid));
@@ -89,12 +111,21 @@ export function TransactionsModule({ type }: { type: MovType }) {
       return a.date > b.date ? -1 : 1;
     });
     return list;
-  }, [transactions, type, search, catFilter, accFilter, yearFilter, monthFilter, statusFilter, sort, catMap]);
+  }, [transactions, type, search, catFilter, subFilter, yearFilter, monthFilter, statusFilter, sort, catMap]);
 
   const total = rows.reduce((s, t) => s + Number(t.amount), 0);
-  const cats = (categories ?? []).filter((c) =>
-    type === "transferencia" ? c.type === "transferencia" : c.type === type || c.type === "ambos",
-  );
+
+  const hasFilters =
+    catFilter !== "all" || subFilter !== "all" || yearFilter !== "all" || monthFilter !== "all" || statusFilter !== "all" || !!search;
+
+  function clearFilters() {
+    setSearch("");
+    setCatFilter("all");
+    setSubFilter("all");
+    setYearFilter("all");
+    setMonthFilter("all");
+    setStatusFilter("all");
+  }
 
   async function duplicate(t: TransactionRow) {
     const { id, installment_group, installment_number, installment_total, ...rest } = t;
@@ -125,67 +156,69 @@ export function TransactionsModule({ type }: { type: MovType }) {
       />
 
       <div className="flex flex-col gap-3 mb-5">
-        <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." className="pl-9" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pesquisar por descrição, observação ou categoria..."
+            className="pl-9"
+          />
         </div>
-        <Select value={catFilter} onValueChange={setCatFilter}>
-          <SelectTrigger className="sm:w-44"><SelectValue placeholder="Categoria" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas categorias</SelectItem>
-            {cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={accFilter} onValueChange={setAccFilter}>
-          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Conta" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas contas</SelectItem>
-            {(accounts ?? []).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-        <Select value={yearFilter} onValueChange={setYearFilter}>
-          <SelectTrigger className="sm:w-32"><SelectValue placeholder="Ano" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos anos</SelectItem>
-            {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={monthFilter} onValueChange={setMonthFilter}>
-          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Mês" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos meses</SelectItem>
-            {monthNames.map((m, i) => (
-              <SelectItem key={m} value={String(i + 1).padStart(2, "0")}>{m}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="sm:w-40"><SelectValue placeholder="Situação" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas situações</SelectItem>
-            <SelectItem value="paid">Pago</SelectItem>
-            <SelectItem value="pending">Pendente</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={sort} onValueChange={setSort}>
-          <SelectTrigger className="sm:w-36"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date">Data</SelectItem>
-            <SelectItem value="amount">Valor</SelectItem>
-            <SelectItem value="description">Descrição</SelectItem>
-          </SelectContent>
-        </Select>
-        {(catFilter !== "all" || accFilter !== "all" || yearFilter !== "all" || monthFilter !== "all" || statusFilter !== "all" || search) && (
-          <Button
-            variant="ghost"
-            onClick={() => { setSearch(""); setCatFilter("all"); setAccFilter("all"); setYearFilter("all"); setMonthFilter("all"); setStatusFilter("all"); }}
-          >
-            <X className="size-4" /> Limpar
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Select value={catFilter} onValueChange={(v) => { setCatFilter(v); setSubFilter("all"); }}>
+            <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Categoria" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {parentCats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {subCats.length > 0 && (
+            <Select value={subFilter} onValueChange={setSubFilter}>
+              <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Subcategoria" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas subcategorias</SelectItem>
+                {subCats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={yearFilter} onValueChange={setYearFilter}>
+            <SelectTrigger className="w-full sm:w-28"><SelectValue placeholder="Ano" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos anos</SelectItem>
+              {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Mês" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos meses</SelectItem>
+              {monthNames.map((m, i) => (
+                <SelectItem key={m} value={String(i + 1).padStart(2, "0")}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Situação" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas situações</SelectItem>
+              <SelectItem value="paid">Pago</SelectItem>
+              <SelectItem value="pending">Pendente</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sort} onValueChange={setSort}>
+            <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Ordenar: Data</SelectItem>
+              <SelectItem value="amount">Ordenar: Valor</SelectItem>
+              <SelectItem value="description">Ordenar: Descrição</SelectItem>
+            </SelectContent>
+          </Select>
+          {hasFilters && (
+            <Button variant="ghost" onClick={clearFilters}>
+              <X className="size-4" /> Limpar
+            </Button>
+          )}
         </div>
       </div>
 
