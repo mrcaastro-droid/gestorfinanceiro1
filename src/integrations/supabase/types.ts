@@ -500,6 +500,7 @@ export type Database = {
           id: string
           name: string
           next_run: string
+          sort_order: number
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
           user_id: string
@@ -515,6 +516,7 @@ export type Database = {
           id?: string
           name: string
           next_run?: string
+          sort_order?: number
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id?: string
@@ -530,6 +532,7 @@ export type Database = {
           id?: string
           name?: string
           next_run?: string
+          sort_order?: number
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id?: string
