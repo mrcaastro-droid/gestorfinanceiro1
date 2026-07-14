@@ -59,6 +59,8 @@ export function TransactionDialog({
 
   useEffect(() => {
     if (open) {
+      setCreatingCat(false);
+      setNewCatName("");
       if (editing) {
         setMovType(editing.type);
         const cat = editing.category_id ? (categories ?? []).find((c) => c.id === editing.category_id) : null;
