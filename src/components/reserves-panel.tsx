@@ -5,84 +5,173 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useList, type TransactionRow, type AccountRow } from "@/lib/finance";
+import { useList, type TransactionRow, type AccountRow, type CategoryRow } from "@/lib/finance";
 import { useHideValues, maskCurrency } from "@/lib/hide-values";
 import { todayISO } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { PiggyBank, ArrowLeftRight, Loader2, HandCoins } from "lucide-react";
+import { PiggyBank, ArrowLeftRight, Loader2, HandCoins, TrendingUp } from "lucide-react";
+
+const NONE = "__none__";
+
+interface Caixinha {
+  catId: string;
+  name: string;
+  color: string;
+  reserved: number;
+  yield: number;
+  withdrawn: number;
+  total: number;
+  defaultAccount: string | null;
+}
 
 export function ReservesPanel() {
   const qc = useQueryClient();
   const { hidden } = useHideValues();
   const { data: transactions } = useList<TransactionRow>("transactions", { orderBy: "date" });
   const { data: accounts } = useList<AccountRow>("accounts");
-  const accMap = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a])), [accounts]);
+  const { data: categories } = useList<CategoryRow>("categories");
+  const catMap = useMemo(() => new Map((categories ?? []).map((c) => [c.id, c])), [categories]);
 
-  const reserves = useMemo(() => {
-    const map = new Map<string, number>();
+  const caixinhas = useMemo<Caixinha[]>(() => {
+    const agg = new Map<string, { reserved: number; yield: number; withdrawn: number; accCount: Map<string, number> }>();
+    const bump = (id: string) => {
+      if (!agg.has(id)) agg.set(id, { reserved: 0, yield: 0, withdrawn: 0, accCount: new Map() });
+      return agg.get(id)!;
+    };
     (transactions ?? []).forEach((t) => {
-      if (t.type === "transferencia" && t.transfer_account_id) {
-        map.set(t.transfer_account_id, (map.get(t.transfer_account_id) ?? 0) + Number(t.amount));
-      } else if (t.type === "receita" && t.is_reserve_withdrawal && t.transfer_account_id) {
-        map.set(t.transfer_account_id, (map.get(t.transfer_account_id) ?? 0) - Number(t.amount));
+      const catId = t.category_id;
+      if (!catId) return;
+      if (t.type === "transferencia") {
+        const a = bump(catId);
+        if (t.is_yield) a.yield += Number(t.amount);
+        else a.reserved += Number(t.amount);
+        if (t.transfer_account_id) a.accCount.set(t.transfer_account_id, (a.accCount.get(t.transfer_account_id) ?? 0) + Number(t.amount));
+      } else if (t.type === "receita" && t.is_reserve_withdrawal) {
+        bump(catId).withdrawn += Number(t.amount);
       }
     });
-    return Array.from(map.entries())
-      .map(([accId, value]) => ({ accId, name: accMap.get(accId)?.name ?? "Conta", color: accMap.get(accId)?.color ?? "#6366f1", value }))
-      .filter((r) => r.value > 0.005)
-      .sort((a, b) => b.value - a.value);
-  }, [transactions, accMap]);
+    return Array.from(agg.entries())
+      .map(([catId, v]) => {
+        let defaultAccount: string | null = null;
+        let best = -1;
+        v.accCount.forEach((amt, acc) => { if (amt > best) { best = amt; defaultAccount = acc; } });
+        return {
+          catId,
+          name: catMap.get(catId)?.name ?? "Caixinha",
+          color: catMap.get(catId)?.color ?? "#6366f1",
+          reserved: v.reserved,
+          yield: v.yield,
+          withdrawn: v.withdrawn,
+          total: v.reserved + v.yield - v.withdrawn,
+          defaultAccount,
+        };
+      })
+      .filter((c) => c.total > 0.005 || c.yield > 0.005)
+      .sort((a, b) => b.total - a.total);
+  }, [transactions, catMap]);
 
-  const total = reserves.reduce((s, r) => s + r.value, 0);
+  const totalGuardado = caixinhas.reduce((s, c) => s + c.total, 0);
+  const totalRend = caixinhas.reduce((s, c) => s + c.yield, 0);
 
-  const [open, setOpen] = useState(false);
+  // ---- Resgate ----
+  const [rescOpen, setRescOpen] = useState(false);
+  const [rescCat, setRescCat] = useState("");
+  const [rescAmount, setRescAmount] = useState("");
+  const [rescDate, setRescDate] = useState(todayISO());
+  const [rescDesc, setRescDesc] = useState("");
+
+  // ---- Rendimento ----
+  const [rendOpen, setRendOpen] = useState(false);
+  const [rendCat, setRendCat] = useState("");
+  const [rendAmount, setRendAmount] = useState("");
+  const [rendAccount, setRendAccount] = useState(NONE);
+  const [rendDate, setRendDate] = useState(todayISO());
+
   const [busy, setBusy] = useState(false);
-  const [accId, setAccId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(todayISO());
-  const [description, setDescription] = useState("");
 
-  const selected = reserves.find((r) => r.accId === accId);
+  const rescSelected = caixinhas.find((c) => c.catId === rescCat);
+  const rendSelected = caixinhas.find((c) => c.catId === rendCat);
 
-  function startResgate(preAcc?: string) {
-    setAccId(preAcc ?? reserves[0]?.accId ?? "");
-    setAmount("");
-    setDate(todayISO());
-    setDescription("");
-    setOpen(true);
+  function startResgate(catId?: string) {
+    setRescCat(catId ?? caixinhas[0]?.catId ?? "");
+    setRescAmount("");
+    setRescDate(todayISO());
+    setRescDesc("");
+    setRescOpen(true);
   }
 
-  async function submit(e: React.FormEvent) {
+  function startRendimento(catId: string) {
+    const c = caixinhas.find((x) => x.catId === catId);
+    setRendCat(catId);
+    setRendAmount("");
+    setRendAccount(c?.defaultAccount ?? NONE);
+    setRendDate(todayISO());
+    setRendOpen(true);
+  }
+
+  async function submitResgate(e: React.FormEvent) {
     e.preventDefault();
-    const value = parseFloat(amount.replace(",", "."));
-    if (!accId) return toast.error("Selecione a reserva.");
+    const value = parseFloat(rescAmount.replace(",", "."));
+    if (!rescCat) return toast.error("Selecione a caixinha.");
     if (!value || value <= 0) return toast.error("Informe um valor válido.");
-    if (selected && value > selected.value + 0.005) return toast.error("Valor maior que o disponível na reserva.");
+    if (rescSelected && value > rescSelected.total + 0.005) return toast.error("Valor maior que o disponível na caixinha.");
     setBusy(true);
     try {
       const { error } = await supabase.from("transactions").insert({
         type: "receita",
         amount: value,
-        date,
-        description: description || `Resgate • ${selected?.name ?? "reserva"}`,
+        date: rescDate,
+        description: rescDesc || `Resgate • ${rescSelected?.name ?? "reserva"}`,
         is_reserve_withdrawal: true,
-        transfer_account_id: accId,
+        category_id: rescCat,
         account_id: null,
-        category_id: null,
         is_paid: true,
       });
       if (error) throw error;
-      qc.invalidateQueries({ queryKey: ["transactions"] });
-      qc.invalidateQueries({ queryKey: ["accounts"] });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      invalidate();
       toast.success("Resgate realizado — valor de volta como receita");
-      setOpen(false);
+      setRescOpen(false);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setBusy(false);
     }
+  }
+
+  async function submitRendimento(e: React.FormEvent) {
+    e.preventDefault();
+    const value = parseFloat(rendAmount.replace(",", "."));
+    if (!rendCat) return toast.error("Selecione a caixinha.");
+    if (!value || value <= 0) return toast.error("Informe um valor válido.");
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("transactions").insert({
+        type: "transferencia",
+        amount: value,
+        date: rendDate,
+        description: `Rendimento • ${rendSelected?.name ?? "reserva"}`,
+        is_yield: true,
+        category_id: rendCat,
+        account_id: null,
+        transfer_account_id: rendAccount === NONE ? null : rendAccount,
+        is_paid: true,
+      });
+      if (error) throw error;
+      invalidate();
+      toast.success("Rendimento adicionado à caixinha");
+      setRendOpen(false);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function invalidate() {
+    qc.invalidateQueries({ queryKey: ["transactions"] });
+    qc.invalidateQueries({ queryKey: ["accounts"] });
+    qc.invalidateQueries({ queryKey: ["dashboard"] });
   }
 
   return (
@@ -93,13 +182,13 @@ export function ReservesPanel() {
             <PiggyBank className="size-4" />
           </span>
           <div>
-            <h2 className="font-semibold leading-tight">Reservas</h2>
-            <p className="text-xs text-muted-foreground">Total guardado via transferências</p>
+            <h2 className="font-semibold leading-tight">Caixinhas &amp; Reservas</h2>
+            <p className="text-xs text-muted-foreground">Guardado por categoria • Rendimento {maskCurrency(totalRend, hidden)}</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-lg font-bold tabular">{maskCurrency(total, hidden)}</p>
-          {reserves.length > 0 && (
+          <p className="text-lg font-bold tabular">{maskCurrency(totalGuardado, hidden)}</p>
+          {caixinhas.length > 0 && (
             <Button size="sm" variant="outline" className="mt-1" onClick={() => startResgate()}>
               <HandCoins className="size-4" /> Resgatar
             </Button>
@@ -107,38 +196,47 @@ export function ReservesPanel() {
         </div>
       </div>
 
-      {reserves.length === 0 ? (
+      {caixinhas.length === 0 ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
-          <ArrowLeftRight className="size-4" /> Nenhuma reserva ainda. Faça uma transferência para guardar dinheiro.
+          <ArrowLeftRight className="size-4" /> Nenhuma caixinha ainda. Faça uma transferência escolhendo uma categoria de reserva.
         </div>
       ) : (
         <div className="divide-y divide-border -mx-1">
-          {reserves.map((r) => (
-            <div key={r.accId} className="px-1 py-2.5 flex items-center justify-between gap-3">
+          {caixinhas.map((c) => (
+            <div key={c.catId} className="px-1 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
-                <span className="text-sm font-medium truncate">{r.name}</span>
+                <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{c.name}</p>
+                  {c.yield > 0.005 && (
+                    <p className="text-[11px] text-income flex items-center gap-1">
+                      <TrendingUp className="size-3" /> Rendimento {maskCurrency(c.yield, hidden)}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-sm font-semibold tabular">{maskCurrency(r.value, hidden)}</span>
-                <Button size="sm" variant="ghost" onClick={() => startResgate(r.accId)}>Resgatar</Button>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-sm font-semibold tabular">{maskCurrency(c.total, hidden)}</span>
+                <Button size="sm" variant="ghost" onClick={() => startRendimento(c.catId)}>Rendimento</Button>
+                <Button size="sm" variant="ghost" onClick={() => startResgate(c.catId)}>Resgatar</Button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* Resgate */}
+      <Dialog open={rescOpen} onOpenChange={setRescOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Resgatar reserva</DialogTitle></DialogHeader>
-          <form onSubmit={submit} className="space-y-4">
+          <DialogHeader><DialogTitle>Resgatar de uma caixinha</DialogTitle></DialogHeader>
+          <form onSubmit={submitResgate} className="space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Reserva</Label>
-              <Select value={accId} onValueChange={setAccId}>
+              <Label className="text-xs text-muted-foreground">Caixinha</Label>
+              <Select value={rescCat} onValueChange={setRescCat}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {reserves.map((r) => (
-                    <SelectItem key={r.accId} value={r.accId}>{r.name} • {maskCurrency(r.value, hidden)}</SelectItem>
+                  {caixinhas.map((c) => (
+                    <SelectItem key={c.catId} value={c.catId}>{c.name} • {maskCurrency(c.total, hidden)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -146,22 +244,56 @@ export function ReservesPanel() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Valor (R$)</Label>
-                <Input inputMode="decimal" required value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
-                {selected && <p className="text-[11px] text-muted-foreground">Disponível: {maskCurrency(selected.value, hidden)}</p>}
+                <Input inputMode="decimal" required value={rescAmount} onChange={(e) => setRescAmount(e.target.value)} placeholder="0,00" />
+                {rescSelected && <p className="text-[11px] text-muted-foreground">Disponível: {maskCurrency(rescSelected.total, hidden)}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Data</Label>
-                <Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input type="date" required value={rescDate} onChange={(e) => setRescDate(e.target.value)} />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Descrição</Label>
-              <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Resgate de reserva" />
+              <Input value={rescDesc} onChange={(e) => setRescDesc(e.target.value)} placeholder="Resgate de reserva" />
             </div>
             <p className="text-xs text-muted-foreground">O valor resgatado volta a contar como receita disponível.</p>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={() => setRescOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={busy}>{busy && <Loader2 className="size-4 animate-spin" />} Resgatar</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rendimento */}
+      <Dialog open={rendOpen} onOpenChange={setRendOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Adicionar rendimento{rendSelected ? ` • ${rendSelected.name}` : ""}</DialogTitle></DialogHeader>
+          <form onSubmit={submitRendimento} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Valor do rendimento (R$)</Label>
+                <Input inputMode="decimal" required value={rendAmount} onChange={(e) => setRendAmount(e.target.value)} placeholder="0,00" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Data</Label>
+                <Input type="date" required value={rendDate} onChange={(e) => setRendDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Creditar na conta (opcional)</Label>
+              <Select value={rendAccount} onValueChange={setRendAccount}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Nenhuma (só a caixinha)</SelectItem>
+                  {(accounts ?? []).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">O rendimento aumenta o montante da caixinha sem contar como receita ou despesa.</p>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setRendOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={busy}>{busy && <Loader2 className="size-4 animate-spin" />} Adicionar</Button>
             </DialogFooter>
           </form>
         </DialogContent>
