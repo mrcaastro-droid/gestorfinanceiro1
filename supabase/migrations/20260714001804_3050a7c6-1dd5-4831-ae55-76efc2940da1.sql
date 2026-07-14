@@ -1,0 +1,1 @@
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS is_yield boolean NOT NULL DEFAULT false;
