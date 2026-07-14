@@ -11,7 +11,7 @@ import { insertRows, useList, type TransactionRow, type CategoryRow, type Accoun
 import { todayISO } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, TrendingUp, TrendingDown, ArrowLeftRight } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, ArrowLeftRight, Plus, Check, X } from "lucide-react";
 
 const NONE = "__none__";
 
@@ -39,6 +39,9 @@ export function TransactionDialog({
   const [movType, setMovType] = useState<MovType>(type);
   const [catParent, setCatParent] = useState<string>(NONE);
   const [catChild, setCatChild] = useState<string>(NONE);
+  const [creatingCat, setCreatingCat] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatColor, setNewCatColor] = useState("#6366f1");
   const [form, setForm] = useState({
     amount: "",
     date: todayISO(),
@@ -104,6 +107,29 @@ export function TransactionDialog({
     setMovType(v);
     setCatParent(NONE);
     setCatChild(NONE);
+    setCreatingCat(false);
+  }
+
+  async function createCaixinha() {
+    const name = newCatName.trim();
+    if (!name) return toast.error("Informe o nome da caixinha.");
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .insert({ name, color: newCatColor, type: "transferencia", icon: "piggy-bank" } as never)
+        .select("id")
+        .single();
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["categories"] });
+      const newId = (data as { id: string }).id;
+      setCatParent(newId);
+      setCatChild(NONE);
+      setCreatingCat(false);
+      setNewCatName("");
+      toast.success("Caixinha criada");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -219,8 +245,37 @@ export function TransactionDialog({
                   <Picker value={form.transfer_account_id} onChange={(v) => setForm({ ...form, transfer_account_id: v })} items={accounts ?? []} placeholder="Selecione" />
                 </Field>
               </div>
-              <Field label="Categoria (reserva/investimento)">
-                <Picker value={catParent} onChange={selectParent} items={parentCats} placeholder="Selecione" />
+              <Field label="Caixinha (reserva/investimento)">
+                {creatingCat ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={newCatColor}
+                      onChange={(e) => setNewCatColor(e.target.value)}
+                      className="size-9 rounded-lg border border-border bg-transparent shrink-0"
+                    />
+                    <Input
+                      autoFocus
+                      value={newCatName}
+                      onChange={(e) => setNewCatName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void createCaixinha(); } }}
+                      placeholder="Nome da nova caixinha"
+                    />
+                    <Button type="button" size="icon" variant="secondary" className="shrink-0" onClick={() => void createCaixinha()}>
+                      <Check className="size-4" />
+                    </Button>
+                    <Button type="button" size="icon" variant="ghost" className="shrink-0" onClick={() => { setCreatingCat(false); setNewCatName(""); }}>
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1"><Picker value={catParent} onChange={selectParent} items={parentCats} placeholder="Selecione" /></div>
+                    <Button type="button" size="icon" variant="outline" className="shrink-0" onClick={() => setCreatingCat(true)} title="Criar nova caixinha">
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+                )}
               </Field>
               {childCats.length > 0 && (
                 <Field label="Subcategoria (opcional)">
