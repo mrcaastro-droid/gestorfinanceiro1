@@ -69,7 +69,7 @@ function ReportsPage() {
   }, [yearRows, month]);
 
   const totals = useMemo(() => {
-    const rec = rows.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+    const rec = rows.filter((t) => t.type === "receita" && !t.is_reserve_withdrawal).reduce((s, t) => s + Number(t.amount), 0);
     const exp = rows.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
     const transf = rows.filter((t) => t.type === "transferencia").reduce((s, t) => s + Number(t.amount), 0);
     return { rec, exp, transf, saldo: rec - exp, rate: rec > 0 ? ((rec - exp) / rec) * 100 : 0 };
@@ -78,7 +78,7 @@ function ReportsPage() {
   // Monthly cash flow across the whole year (respects category/account/type filters).
   const monthly = useMemo(() => MONTHS.map((m, idx) => {
     const mr = yearRows.filter((t) => new Date(t.date + "T00:00:00").getMonth() === idx);
-    const Receitas = mr.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+    const Receitas = mr.filter((t) => t.type === "receita" && !t.is_reserve_withdrawal).reduce((s, t) => s + Number(t.amount), 0);
     const Despesas = mr.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
     const Transferido = mr.filter((t) => t.type === "transferencia").reduce((s, t) => s + Number(t.amount), 0);
     return { mes: m, Receitas, Despesas, Transferido, Saldo: Receitas - Despesas };
@@ -94,7 +94,7 @@ function ReportsPage() {
   const byCategory = useMemo(() => {
     const targetType = type === "todos" ? "despesa" : type;
     const map = new Map<string, { name: string; value: number; color: string }>();
-    rows.filter((t) => t.type === targetType).forEach((t) => {
+    rows.filter((t) => t.type === targetType && !(targetType === "receita" && t.is_reserve_withdrawal)).forEach((t) => {
       const cat = t.category_id ? catMap.get(t.category_id) : null;
       const parent = cat?.parent_id ? catMap.get(cat.parent_id) : null;
       const top = parent ?? cat;
@@ -113,7 +113,7 @@ function ReportsPage() {
   const bySubcategory = useMemo(() => {
     const targetType = type === "todos" ? "despesa" : type;
     const map = new Map<string, { name: string; value: number; color: string }>();
-    rows.filter((t) => t.type === targetType && t.category_id).forEach((t) => {
+    rows.filter((t) => t.type === targetType && t.category_id && !(targetType === "receita" && t.is_reserve_withdrawal)).forEach((t) => {
       const cat = catMap.get(t.category_id as string);
       if (!cat || !cat.parent_id) return; // only real subcategories
       const parent = catMap.get(cat.parent_id);
