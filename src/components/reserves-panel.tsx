@@ -80,6 +80,7 @@ export function ReservesPanel() {
   const [rescAmount, setRescAmount] = useState("");
   const [rescDate, setRescDate] = useState(todayISO());
   const [rescDesc, setRescDesc] = useState("");
+  const [rescAccount, setRescAccount] = useState<string>("");
 
   // ---- Rendimento ----
   const [rendOpen, setRendOpen] = useState(false);
@@ -94,7 +95,10 @@ export function ReservesPanel() {
   const rendSelected = caixinhas.find((c) => c.catId === rendCat);
 
   function startResgate(catId?: string) {
-    setRescCat(catId ?? caixinhas[0]?.catId ?? "");
+    const cat = catId ?? caixinhas[0]?.catId ?? "";
+    setRescCat(cat);
+    const c = caixinhas.find((x) => x.catId === cat);
+    setRescAccount(c?.defaultAccount ?? (accounts?.[0]?.id ?? ""));
     setRescAmount("");
     setRescDate(todayISO());
     setRescDesc("");
@@ -116,6 +120,7 @@ export function ReservesPanel() {
     if (!rescCat) return toast.error("Selecione a caixinha.");
     if (!value || value <= 0) return toast.error("Informe um valor válido.");
     if (rescSelected && value > rescSelected.total + 0.005) return toast.error("Valor maior que o disponível na caixinha.");
+    if (!rescAccount) return toast.error("Selecione a conta que receberá o valor.");
     setBusy(true);
     try {
       const { error } = await supabase.from("transactions").insert({
@@ -125,7 +130,7 @@ export function ReservesPanel() {
         description: rescDesc || `Resgate • ${rescSelected?.name ?? "reserva"}`,
         is_reserve_withdrawal: true,
         category_id: rescCat,
-        account_id: null,
+        account_id: rescAccount,
         is_paid: true,
       });
       if (error) throw error;
@@ -241,6 +246,15 @@ export function ReservesPanel() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Creditar na conta</Label>
+              <Select value={rescAccount} onValueChange={setRescAccount}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {(accounts ?? []).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Valor (R$)</Label>
@@ -256,7 +270,7 @@ export function ReservesPanel() {
               <Label className="text-xs text-muted-foreground">Descrição</Label>
               <Input value={rescDesc} onChange={(e) => setRescDesc(e.target.value)} placeholder="Resgate de reserva" />
             </div>
-            <p className="text-xs text-muted-foreground">O valor resgatado volta a contar como receita disponível.</p>
+            <p className="text-xs text-muted-foreground">O valor volta para o saldo disponível da conta escolhida. Não conta como Receita do mês.</p>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setRescOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={busy}>{busy && <Loader2 className="size-4 animate-spin" />} Resgatar</Button>

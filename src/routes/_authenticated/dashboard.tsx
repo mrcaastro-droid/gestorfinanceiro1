@@ -57,15 +57,25 @@ function Dashboard() {
       const d = new Date(t.date + "T00:00:00");
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
-    const receitas = monthTxs.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+    const receitas = monthTxs
+      .filter((t) => t.type === "receita" && !t.is_reserve_withdrawal)
+      .reduce((s, t) => s + Number(t.amount), 0);
     const despesas = monthTxs.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
-    // Total reservado acumulado = transferências guardadas menos resgates já retirados.
+    // Total reservado acumulado = transferências guardadas + rendimentos - resgates.
     const transfOut = txs.filter((t) => t.type === "transferencia").reduce((s, t) => s + Number(t.amount), 0);
     const resgates = txs.filter((t) => t.type === "receita" && t.is_reserve_withdrawal).reduce((s, t) => s + Number(t.amount), 0);
-    const transferido = transfOut - resgates;
-    const saldo = (accounts ?? []).reduce((s, a) => s + Number(a.current_balance), 0);
+    const reservas = Math.max(0, transfOut - resgates);
+    const totalContas = (accounts ?? []).reduce((s, a) => s + Number(a.current_balance), 0);
+    const disponivel = totalContas - reservas;
     const invest = (investments ?? []).reduce((s, i) => s + Number(i.current_value), 0);
-    return { receitas, despesas, transferido, economia: receitas - despesas, saldo, patrimonio: saldo + invest };
+    return {
+      receitas,
+      despesas,
+      reservas,
+      economia: receitas - despesas,
+      disponivel,
+      patrimonio: totalContas + invest,
+    };
   }, [transactions, accounts, investments, now]);
 
   const monthlyChart = useMemo(() => {
@@ -78,7 +88,7 @@ function Dashboard() {
       });
       arr.push({
         mes: MONTHS[d.getMonth()],
-        Receitas: rows.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0),
+        Receitas: rows.filter((t) => t.type === "receita" && !t.is_reserve_withdrawal).reduce((s, t) => s + Number(t.amount), 0),
         Despesas: rows.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0),
       });
     }
@@ -128,10 +138,10 @@ function Dashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard icon={Wallet} label="Saldo atual" value={metrics.saldo} hidden={hidden} />
+          <StatCard icon={Wallet} label="Saldo disponível" value={metrics.disponivel} hidden={hidden} />
           <StatCard icon={TrendingUp} label="Receitas do mês" value={metrics.receitas} tone="income" hidden={hidden} />
           <StatCard icon={TrendingDown} label="Despesas do mês" value={metrics.despesas} tone="expense" hidden={hidden} />
-          <StatCard icon={ArrowLeftRight} label="Transferido/Reservado" value={metrics.transferido} hidden={hidden} />
+          <StatCard icon={PiggyBank} label="Reservas" value={metrics.reservas} hidden={hidden} />
           <StatCard icon={Landmark} label="Patrimônio total" value={metrics.patrimonio} highlight hidden={hidden} />
         </div>
       )}
