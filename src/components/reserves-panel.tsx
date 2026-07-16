@@ -13,8 +13,6 @@ import { toast } from "sonner";
 import { PiggyBank, ArrowLeftRight, Loader2, HandCoins, TrendingUp, ChevronDown, ChevronRight, Pencil, Trash2, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { ConfirmDelete } from "@/components/confirm-delete";
 
-const NONE = "__none__";
-
 interface Caixinha {
   catId: string;
   name: string;
