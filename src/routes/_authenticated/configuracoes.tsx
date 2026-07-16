@@ -11,7 +11,7 @@ import { useTheme } from "@/lib/theme";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Landmark, CreditCard, Users, Hash, TrendingUp, Target, Sun, Moon, Palette, MessageCircle } from "lucide-react";
+import { Landmark, CreditCard, Users, Hash, TrendingUp, Target, Sun, Moon, Palette, MessageCircle, Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({ component: SettingsPage });
 
@@ -70,6 +70,17 @@ function SettingsPage() {
                   <button key={c} onClick={() => setAccent(c)} className={`size-9 rounded-full border-2 ${accent === c ? "border-foreground" : "border-transparent"}`} style={{ backgroundColor: c }} aria-label={c} />
                 ))}
               </div>
+            </div>
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <h3 className="font-semibold mb-1">Modelo de planilha para importação</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Baixe o modelo em CSV e preencha suas transações seguindo o formato de exemplo.
+                Colunas: data (AAAA-MM-DD), tipo (receita/despesa/transferencia), descrição, valor,
+                categoria, subcategoria, conta, observação, pago (sim/nao).
+              </p>
+              <a href="/modelo-importacao.csv" download>
+                <Button variant="outline"><Download className="size-4" /> Baixar modelo CSV</Button>
+              </a>
             </div>
           </div>
         </TabsContent>

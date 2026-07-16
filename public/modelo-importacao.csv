@@ -1,0 +1,6 @@
+data,tipo,descricao,valor,categoria,subcategoria,conta,observacao,pago
+2026-01-05,receita,Salário,5000.00,Salário,,Conta Corrente,Referente a janeiro,sim
+2026-01-06,despesa,Supermercado,320.50,Alimentação,Mercado,Conta Corrente,Compras da semana,sim
+2026-01-08,despesa,Aluguel,1500.00,Moradia,Aluguel,Conta Corrente,,sim
+2026-01-10,despesa,Internet,120.00,Moradia,Contas fixas,Conta Corrente,,nao
+2026-01-15,transferencia,Reserva de emergência,500.00,Reserva de emergência,,Poupança,Guardar mensal,sim

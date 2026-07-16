@@ -85,6 +85,10 @@ export function TransactionsModule({ type }: { type: MovType }) {
 
   const rows = useMemo(() => {
     let list = (transactions ?? []).filter((t) => t.type === type);
+    // Rendimentos de caixinhas não devem aparecer na listagem de transferências
+    if (type === "transferencia") list = list.filter((t) => !t.is_yield);
+    // Resgates são receitas técnicas de reserva — não aparecem em Receitas
+    if (type === "receita") list = list.filter((t) => !t.is_reserve_withdrawal);
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(

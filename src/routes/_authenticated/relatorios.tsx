@@ -71,7 +71,7 @@ function ReportsPage() {
   const totals = useMemo(() => {
     const rec = rows.filter((t) => t.type === "receita" && !t.is_reserve_withdrawal).reduce((s, t) => s + Number(t.amount), 0);
     const exp = rows.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
-    const transf = rows.filter((t) => t.type === "transferencia").reduce((s, t) => s + Number(t.amount), 0);
+    const transf = rows.filter((t) => t.type === "transferencia" && !t.is_yield).reduce((s, t) => s + Number(t.amount), 0);
     return { rec, exp, transf, saldo: rec - exp, rate: rec > 0 ? ((rec - exp) / rec) * 100 : 0 };
   }, [rows]);
 
@@ -80,7 +80,7 @@ function ReportsPage() {
     const mr = yearRows.filter((t) => new Date(t.date + "T00:00:00").getMonth() === idx);
     const Receitas = mr.filter((t) => t.type === "receita" && !t.is_reserve_withdrawal).reduce((s, t) => s + Number(t.amount), 0);
     const Despesas = mr.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
-    const Transferido = mr.filter((t) => t.type === "transferencia").reduce((s, t) => s + Number(t.amount), 0);
+    const Transferido = mr.filter((t) => t.type === "transferencia" && !t.is_yield).reduce((s, t) => s + Number(t.amount), 0);
     return { mes: m, Receitas, Despesas, Transferido, Saldo: Receitas - Despesas };
   }), [yearRows]);
 
