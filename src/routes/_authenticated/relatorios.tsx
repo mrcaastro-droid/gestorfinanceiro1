@@ -452,3 +452,43 @@ function KpiCard({ icon: Icon, label, value, tone, isPercent, hidden }: {
     </div>
   );
 }
+
+function FluxoRow({
+  label,
+  hint,
+  value,
+  tone,
+  op,
+  hidden,
+  icon: Icon,
+  strong,
+}: {
+  label: string;
+  hint: string;
+  value: number;
+  tone: "income" | "expense" | "neutral" | "primary";
+  op?: string;
+  hidden: boolean;
+  icon: typeof ArrowUpRight;
+  strong?: boolean;
+}) {
+  const color =
+    tone === "income" ? "text-income" : tone === "expense" ? "text-expense" : tone === "primary" ? "text-primary" : "text-foreground";
+  return (
+    <div className="flex items-center gap-2 py-1.5">
+      <span className="w-4 text-center text-sm font-semibold text-muted-foreground">{op ?? ""}</span>
+      <Icon className="size-4 text-muted-foreground shrink-0" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1">
+          <span className={cn("truncate text-sm", strong && "font-semibold")}>{label}</span>
+          <span title={hint} className="cursor-help text-muted-foreground/70">
+            <Info className="size-3" />
+          </span>
+        </div>
+      </div>
+      <span className={cn("tabular text-sm shrink-0", strong ? "text-base font-bold" : "font-medium", color)}>
+        {maskCurrency(value, hidden)}
+      </span>
+    </div>
+  );
+}
