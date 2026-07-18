@@ -5,7 +5,7 @@ import { formatCompact } from "@/lib/format";
 import { useMemo, useState } from "react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  PieChart, Pie, Cell, Legend, AreaChart, Area, LineChart, Line,
+  PieChart, Pie, Cell, Legend, AreaChart, Area, LineChart, Line, ComposedChart,
 } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowDownRight, ArrowUpRight, Scale, PiggyBank, ArrowLeftRight, HandCoins, Wallet, Info, TrendingUp, TrendingDown } from "lucide-react";
@@ -300,7 +300,7 @@ function ReportsPage() {
           </div>
         </div>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={monthly} stackOffset="sign">
+          <ComposedChart data={monthly} stackOffset="sign">
             <CartesianGrid strokeDasharray="3 3" className="opacity-20" vertical={false} />
             <XAxis dataKey="mes" fontSize={11} tickLine={false} axisLine={false} />
             <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => (hidden ? "•••" : formatCompact(Number(v)))} />
@@ -311,7 +311,7 @@ function ReportsPage() {
             <Bar dataKey="Despesas" stackId="out" fill="var(--expense)" radius={[4, 4, 0, 0]} />
             {hasTransfers && <Bar dataKey="Transferido" stackId="out" fill="var(--primary)" radius={[4, 4, 0, 0]} />}
             <Line dataKey="Caixa" type="monotone" stroke="var(--foreground)" strokeWidth={2} dot={false} />
-          </BarChart>
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
 
