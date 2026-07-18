@@ -91,11 +91,16 @@ export function TransactionsModule({ type }: { type: MovType }) {
     if (type === "receita") list = list.filter((t) => !t.is_reserve_withdrawal);
     if (search) {
       const q = search.toLowerCase();
+      const qDigits = q.replace(/[^0-9]/g, "");
+      const qNum = parseFloat(q.replace(/\./g, "").replace(",", "."));
       list = list.filter(
         (t) =>
           (t.description ?? "").toLowerCase().includes(q) ||
           (t.notes ?? "").toLowerCase().includes(q) ||
-          (catMap.get(t.category_id ?? "")?.name ?? "").toLowerCase().includes(q),
+          (catMap.get(t.category_id ?? "")?.name ?? "").toLowerCase().includes(q) ||
+          String(t.amount).includes(q) ||
+          (qDigits.length > 0 && String(t.amount).replace(/[^0-9]/g, "").includes(qDigits)) ||
+          (!Number.isNaN(qNum) && Math.abs(Number(t.amount) - qNum) < 0.005),
       );
     }
     if (catFilter !== "all") {
@@ -165,7 +170,7 @@ export function TransactionsModule({ type }: { type: MovType }) {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Pesquisar por descrição, observação ou categoria..."
+            placeholder="Pesquisar por descrição, observação, categoria ou valor..."
             className="pl-9"
           />
         </div>
