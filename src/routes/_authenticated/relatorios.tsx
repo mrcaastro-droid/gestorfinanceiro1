@@ -8,7 +8,7 @@ import {
   PieChart, Pie, Cell, Legend, AreaChart, Area, LineChart, Line,
 } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowDownRight, ArrowUpRight, Scale, PiggyBank, ArrowLeftRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Scale, PiggyBank, ArrowLeftRight, HandCoins, Wallet, Info, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHideValues, maskCurrency } from "@/lib/hide-values";
 
@@ -72,7 +72,17 @@ function ReportsPage() {
     const rec = rows.filter((t) => t.type === "receita" && !t.is_reserve_withdrawal).reduce((s, t) => s + Number(t.amount), 0);
     const exp = rows.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
     const transf = rows.filter((t) => t.type === "transferencia" && !t.is_yield).reduce((s, t) => s + Number(t.amount), 0);
-    return { rec, exp, transf, saldo: rec - exp, rate: rec > 0 ? ((rec - exp) / rec) * 100 : 0 };
+    const resg = rows.filter((t) => t.type === "receita" && t.is_reserve_withdrawal).reduce((s, t) => s + Number(t.amount), 0);
+    return {
+      rec,
+      exp,
+      transf,
+      resg,
+      saldo: rec - exp,
+      disponivel: rec + resg,
+      caixa: rec + resg - exp - transf,
+      rate: rec > 0 ? ((rec - exp) / rec) * 100 : 0,
+    };
   }, [rows]);
 
   // Monthly cash flow across the whole year (respects category/account/type filters).
@@ -81,7 +91,16 @@ function ReportsPage() {
     const Receitas = mr.filter((t) => t.type === "receita" && !t.is_reserve_withdrawal).reduce((s, t) => s + Number(t.amount), 0);
     const Despesas = mr.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
     const Transferido = mr.filter((t) => t.type === "transferencia" && !t.is_yield).reduce((s, t) => s + Number(t.amount), 0);
-    return { mes: m, Receitas, Despesas, Transferido, Saldo: Receitas - Despesas };
+    const Resgates = mr.filter((t) => t.type === "receita" && t.is_reserve_withdrawal).reduce((s, t) => s + Number(t.amount), 0);
+    return {
+      mes: m,
+      Receitas,
+      Despesas,
+      Transferido,
+      Resgates,
+      Saldo: Receitas - Despesas,
+      Caixa: Receitas + Resgates - Despesas - Transferido,
+    };
   }), [yearRows]);
 
   // Cumulative balance evolution.
@@ -129,6 +148,7 @@ function ReportsPage() {
   const periodLabel = month === "todos" ? `Ano de ${year}` : `${MONTHS_FULL[Number(month)]} de ${year}`;
   const breakdownLabel = type === "receita" ? "Receitas" : type === "transferencia" ? "Transferências" : "Despesas";
   const hasTransfers = monthly.some((m) => m.Transferido > 0);
+  const hasResgates = monthly.some((m) => m.Resgates > 0);
 
   return (
     <PageContainer>
@@ -186,17 +206,77 @@ function ReportsPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         <KpiCard icon={ArrowUpRight} label="Receitas" value={totals.rec} tone="income" hidden={hidden} />
         <KpiCard icon={ArrowDownRight} label="Despesas" value={totals.exp} tone="expense" hidden={hidden} />
         <KpiCard icon={ArrowLeftRight} label="Transferido" value={totals.transf} tone="neutral" hidden={hidden} />
+        <KpiCard icon={HandCoins} label="Resgatado das reservas" value={totals.resg} tone="neutral" hidden={hidden} />
         <KpiCard icon={Scale} label="Saldo" value={totals.saldo} tone={totals.saldo >= 0 ? "income" : "expense"} hidden={hidden} />
-        <KpiCard icon={PiggyBank} label="Taxa de economia" value={totals.rate} tone="neutral" isPercent />
+      </div>
+
+      {/* Demonstrativo x Fluxo de caixa */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold">Demonstrativo financeiro</h3>
+            <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Ganhou ou perdeu?</span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">Considera apenas receitas e despesas — sem movimentações internas.</p>
+          <FluxoRow label="Receitas" hint="Dinheiro recebido de fontes externas." value={totals.rec} tone="income" hidden={hidden} icon={TrendingUp} />
+          <FluxoRow label="Despesas" hint="Saídas definitivas do período." value={totals.exp} tone="expense" op="−" hidden={hidden} icon={TrendingDown} />
+          <div className="border-t border-border mt-2 pt-2">
+            <FluxoRow
+              label="Resultado financeiro"
+              hint="Diferença entre receitas e despesas."
+              value={totals.saldo}
+              tone={totals.saldo >= 0 ? "income" : "expense"}
+              op="="
+              hidden={hidden}
+              icon={Scale}
+              strong
+            />
+          </div>
+          <div className="mt-3 text-[11px] text-muted-foreground">
+            Taxa de economia: <span className="font-medium text-foreground">{totals.rate.toFixed(1)}%</span>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold">Fluxo de caixa</h3>
+            <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Origem dos recursos</span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">Mostra o dinheiro realmente disponível, incluindo resgates e transferências para reservas.</p>
+          <FluxoRow label="Receitas" hint="Dinheiro recebido de fontes externas." value={totals.rec} tone="income" hidden={hidden} icon={TrendingUp} />
+          <FluxoRow label="Resgates das reservas" hint="Dinheiro retirado das reservas para uso. Não é receita." value={totals.resg} tone="neutral" op="+" hidden={hidden} icon={HandCoins} />
+          <div className="border-t border-border mt-2 pt-2 mb-1">
+            <FluxoRow label="Total disponível" hint="Recursos que estiveram disponíveis para uso." value={totals.disponivel} tone="primary" op="=" hidden={hidden} icon={Wallet} strong />
+          </div>
+          <FluxoRow label="Despesas" hint="Saídas definitivas do período." value={totals.exp} tone="expense" op="−" hidden={hidden} icon={TrendingDown} />
+          <FluxoRow label="Guardado em reservas" hint="Transferências internas para caixinhas." value={totals.transf} tone="neutral" op="−" hidden={hidden} icon={PiggyBank} />
+          <div className="border-t border-border mt-2 pt-2">
+            <FluxoRow
+              label="Caixa disponível"
+              hint="Sobra (ou déficit) real no caixa após despesas e reservas."
+              value={totals.caixa}
+              tone={totals.caixa >= 0 ? "income" : "expense"}
+              op="="
+              hidden={hidden}
+              icon={Scale}
+              strong
+            />
+          </div>
+        </div>
       </div>
 
       {/* Fluxo de caixa mensal */}
       <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-        <h3 className="font-semibold mb-4">Fluxo de caixa mensal — {year}</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold">Demonstrativo mensal — {year}</h3>
+            <p className="text-xs text-muted-foreground">Receitas e despesas do período.</p>
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={monthly}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-20" vertical={false} />
@@ -207,6 +287,30 @@ function ReportsPage() {
             <Bar dataKey="Receitas" fill="var(--income)" radius={[4, 4, 0, 0]} />
             <Bar dataKey="Despesas" fill="var(--expense)" radius={[4, 4, 0, 0]} />
             {hasTransfers && <Bar dataKey="Transferido" fill="var(--primary)" radius={[4, 4, 0, 0]} />}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Fluxo de caixa (entradas x saídas) */}
+      <div className="bg-card border border-border rounded-2xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold">Fluxo de caixa — {year}</h3>
+            <p className="text-xs text-muted-foreground">Entradas (receitas + resgates) e saídas (despesas + reservas) por mês.</p>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={monthly} stackOffset="sign">
+            <CartesianGrid strokeDasharray="3 3" className="opacity-20" vertical={false} />
+            <XAxis dataKey="mes" fontSize={11} tickLine={false} axisLine={false} />
+            <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => (hidden ? "•••" : formatCompact(Number(v)))} />
+            <Tooltip formatter={(v: number) => maskCurrency(Number(v), hidden)} cursor={{ fill: "var(--muted)", opacity: 0.3 }} contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Bar dataKey="Receitas" stackId="in" fill="var(--income)" radius={[4, 4, 0, 0]} />
+            {hasResgates && <Bar dataKey="Resgates" stackId="in" fill="#22d3ee" radius={[4, 4, 0, 0]} />}
+            <Bar dataKey="Despesas" stackId="out" fill="var(--expense)" radius={[4, 4, 0, 0]} />
+            {hasTransfers && <Bar dataKey="Transferido" stackId="out" fill="var(--primary)" radius={[4, 4, 0, 0]} />}
+            <Line dataKey="Caixa" type="monotone" stroke="var(--foreground)" strokeWidth={2} dot={false} />
           </BarChart>
         </ResponsiveContainer>
       </div>
