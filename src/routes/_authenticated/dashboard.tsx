@@ -25,6 +25,9 @@ import {
   AlertTriangle,
   CalendarClock,
   Target,
+  HandCoins,
+  Scale,
+  Info,
 } from "lucide-react";
 import { PageContainer, PageHeader } from "@/components/app-shell";
 import { useList, useAutoGenerateRecurring, type TransactionRow, type AccountRow, type CategoryRow, type GoalRow, type InvestmentRow } from "@/lib/finance";
@@ -61,6 +64,12 @@ function Dashboard() {
       .filter((t) => t.type === "receita" && !t.is_reserve_withdrawal)
       .reduce((s, t) => s + Number(t.amount), 0);
     const despesas = monthTxs.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+    const resgates = monthTxs
+      .filter((t) => t.type === "receita" && t.is_reserve_withdrawal)
+      .reduce((s, t) => s + Number(t.amount), 0);
+    const transferidoMes = monthTxs
+      .filter((t) => t.type === "transferencia" && !t.is_yield)
+      .reduce((s, t) => s + Number(t.amount), 0);
     // Total reservado por caixinha (categoria) = guardado + rendimento - resgates da MESMA caixinha.
     // Somar globalmente distorce: um resgate antigo em uma caixinha zerava uma transferência nova em outra.
     const perCaixinha = new Map<string, number>();
@@ -81,6 +90,8 @@ function Dashboard() {
     return {
       receitas,
       despesas,
+      resgates,
+      transferidoMes,
       reservas,
       economia: receitas - despesas,
       disponivel,
@@ -171,6 +182,14 @@ function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </Card>
+
+          <OrigemRecursosCard
+            receitas={metrics.receitas}
+            resgates={metrics.resgates}
+            despesas={metrics.despesas}
+            transferidoMes={metrics.transferidoMes}
+            hidden={hidden}
+          />
 
           <Card title="Últimos lançamentos" action={<Link to="/despesas" className="text-xs text-primary font-medium hover:underline">Ver todos</Link>}>
             {recent.length === 0 ? (
@@ -333,6 +352,104 @@ function Card({ title, children, action }: { title: string; children: React.Reac
         {action}
       </div>
       {children}
+    </div>
+  );
+}
+
+function OrigemRecursosCard({
+  receitas,
+  resgates,
+  despesas,
+  transferidoMes,
+  hidden,
+}: {
+  receitas: number;
+  resgates: number;
+  despesas: number;
+  transferidoMes: number;
+  hidden: boolean;
+}) {
+  const totalDisponivel = receitas + resgates;
+  const saldoCaixa = totalDisponivel - despesas - transferidoMes;
+  return (
+    <div className="bg-card border border-border rounded-2xl p-5">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-semibold">Origem dos recursos</h3>
+        <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Fluxo de caixa do mês</span>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">De onde veio o dinheiro utilizado neste mês.</p>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-stretch">
+        <OrigemItem label="Receitas" hint="Dinheiro recebido de fontes externas." value={receitas} tone="income" hidden={hidden} icon={TrendingUp} />
+        <OrigemOp>+</OrigemOp>
+        <OrigemItem label="Resgates das reservas" hint="Dinheiro retirado das reservas. Não conta como receita." value={resgates} tone="neutral" hidden={hidden} icon={HandCoins} />
+        <OrigemOp>=</OrigemOp>
+        <OrigemItem label="Total disponível" hint="Recursos disponíveis para uso no mês." value={totalDisponivel} tone="primary" hidden={hidden} icon={Wallet} />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-stretch mt-3">
+        <OrigemItem label="Despesas" hint="Saídas definitivas do mês." value={despesas} tone="expense" hidden={hidden} icon={TrendingDown} />
+        {transferidoMes > 0 ? (
+          <>
+            <OrigemOp>+</OrigemOp>
+            <OrigemItem label="Guardado em reservas" hint="Transferências para caixinhas neste mês." value={transferidoMes} tone="neutral" hidden={hidden} icon={PiggyBank} />
+          </>
+        ) : (
+          <>
+            <div className="hidden md:block" />
+            <div className="hidden md:block" />
+          </>
+        )}
+        <OrigemOp>=</OrigemOp>
+        <OrigemItem
+          label="Saldo do caixa"
+          hint="Sobra (ou déficit) após despesas e guardados."
+          value={saldoCaixa}
+          tone={saldoCaixa >= 0 ? "income" : "expense"}
+          hidden={hidden}
+          icon={Scale}
+        />
+      </div>
+    </div>
+  );
+}
+
+function OrigemOp({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="hidden md:flex items-center justify-center text-xl font-semibold text-muted-foreground">
+      {children}
+    </div>
+  );
+}
+
+function OrigemItem({
+  label,
+  hint,
+  value,
+  tone,
+  hidden,
+  icon: Icon,
+}: {
+  label: string;
+  hint: string;
+  value: number;
+  tone: "income" | "expense" | "neutral" | "primary";
+  hidden: boolean;
+  icon: typeof Wallet;
+}) {
+  const color =
+    tone === "income" ? "text-income" : tone === "expense" ? "text-expense" : tone === "primary" ? "text-primary" : "text-foreground";
+  const bg =
+    tone === "primary" ? "bg-primary/5 border-primary/30" : "bg-muted/30 border-border";
+  return (
+    <div className={`rounded-xl border p-3 ${bg}`}>
+      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <Icon className="size-3.5" />
+        <span className="truncate">{label}</span>
+        <span title={hint} className="ml-auto cursor-help">
+          <Info className="size-3 opacity-60" />
+        </span>
+      </div>
+      <p className={`mt-1 text-lg font-bold tabular ${color}`}>{maskCurrency(value, hidden)}</p>
+      <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 line-clamp-2">{hint}</p>
     </div>
   );
 }
