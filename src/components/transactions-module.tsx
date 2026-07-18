@@ -170,7 +170,7 @@ export function TransactionsModule({ type }: { type: MovType }) {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Pesquisar por descrição, observação ou categoria..."
+            placeholder="Pesquisar por descrição, observação, categoria ou valor..."
             className="pl-9"
           />
         </div>
