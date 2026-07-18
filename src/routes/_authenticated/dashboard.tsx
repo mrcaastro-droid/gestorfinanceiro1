@@ -25,6 +25,9 @@ import {
   AlertTriangle,
   CalendarClock,
   Target,
+  HandCoins,
+  Scale,
+  Info,
 } from "lucide-react";
 import { PageContainer, PageHeader } from "@/components/app-shell";
 import { useList, useAutoGenerateRecurring, type TransactionRow, type AccountRow, type CategoryRow, type GoalRow, type InvestmentRow } from "@/lib/finance";
@@ -61,6 +64,12 @@ function Dashboard() {
       .filter((t) => t.type === "receita" && !t.is_reserve_withdrawal)
       .reduce((s, t) => s + Number(t.amount), 0);
     const despesas = monthTxs.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+    const resgates = monthTxs
+      .filter((t) => t.type === "receita" && t.is_reserve_withdrawal)
+      .reduce((s, t) => s + Number(t.amount), 0);
+    const transferidoMes = monthTxs
+      .filter((t) => t.type === "transferencia" && !t.is_yield)
+      .reduce((s, t) => s + Number(t.amount), 0);
     // Total reservado por caixinha (categoria) = guardado + rendimento - resgates da MESMA caixinha.
     // Somar globalmente distorce: um resgate antigo em uma caixinha zerava uma transferência nova em outra.
     const perCaixinha = new Map<string, number>();
@@ -81,6 +90,8 @@ function Dashboard() {
     return {
       receitas,
       despesas,
+      resgates,
+      transferidoMes,
       reservas,
       economia: receitas - despesas,
       disponivel,
@@ -171,6 +182,14 @@ function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </Card>
+
+          <OrigemRecursosCard
+            receitas={metrics.receitas}
+            resgates={metrics.resgates}
+            despesas={metrics.despesas}
+            transferidoMes={metrics.transferidoMes}
+            hidden={hidden}
+          />
 
           <Card title="Últimos lançamentos" action={<Link to="/despesas" className="text-xs text-primary font-medium hover:underline">Ver todos</Link>}>
             {recent.length === 0 ? (
