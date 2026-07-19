@@ -4,6 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SimpleCrud } from "@/components/simple-crud";
 import { CategoriesManager } from "@/components/categories-manager";
 import { WhatsAppSettings } from "@/components/whatsapp-settings";
+import { MonthLocksManager } from "@/components/month-locks-manager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +12,7 @@ import { useTheme } from "@/lib/theme";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Landmark, CreditCard, Users, Hash, TrendingUp, Target, Sun, Moon, Palette, MessageCircle, Download } from "lucide-react";
+import { Landmark, CreditCard, Users, Hash, TrendingUp, Target, Sun, Moon, Palette, MessageCircle, Download, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({ component: SettingsPage });
 
@@ -47,6 +48,7 @@ function SettingsPage() {
           <TabsTrigger value="tags">Tags</TabsTrigger>
           <TabsTrigger value="tipos">Tipos de investimento</TabsTrigger>
           <TabsTrigger value="metas">Categorias de metas</TabsTrigger>
+          <TabsTrigger value="bloqueios"><Lock className="size-4" /> Bloqueio de meses</TabsTrigger>
           <TabsTrigger value="seguranca">Segurança</TabsTrigger>
         </TabsList>
 
@@ -114,6 +116,10 @@ function SettingsPage() {
         <TabsContent value="metas">
           <SimpleCrud embedded table="goal_categories" title="Categorias de metas" singular="Categoria" icon={Target}
             fields={[{ name: "name", label: "Nome" }]} />
+        </TabsContent>
+
+        <TabsContent value="bloqueios">
+          <MonthLocksManager />
         </TabsContent>
 
         <TabsContent value="seguranca">
