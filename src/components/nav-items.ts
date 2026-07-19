@@ -11,6 +11,7 @@ import {
   Calendar,
   BarChart3,
   Settings,
+  HandCoins,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ export const navItems: NavItem[] = [
   { title: "Receitas", to: "/receitas", icon: TrendingUp },
   { title: "Despesas", to: "/despesas", icon: TrendingDown },
   { title: "Transferências", to: "/transferencias", icon: ArrowLeftRight },
+  { title: "Resgates", to: "/resgates", icon: HandCoins },
   { title: "Contas", to: "/contas", icon: Wallet },
   { title: "Cartões", to: "/cartoes", icon: CreditCard },
   { title: "Recorrências", to: "/recorrencias", icon: Repeat },
