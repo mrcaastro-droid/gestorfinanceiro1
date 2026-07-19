@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// deno-lint-ignore no-explicit-any
 type Row = Record<string, any>;
+
+const META_API_VERSION = "v22.0";
 
 function brl(n: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n || 0);
@@ -11,30 +12,28 @@ function iso(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-async function sendWhatsapp(to: string, body: string) {
-  const gateway = "https://connector-gateway.lovable.dev/twilio";
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const twilioKey = process.env.TWILIO_API_KEY;
-  const from = process.env.TWILIO_WHATSAPP_FROM;
-  if (!lovableKey || !twilioKey || !from) {
-    throw new Error("Twilio/WhatsApp não configurado (TWILIO_WHATSAPP_FROM ausente)");
+async function sendMetaMessage(to: string, body: string) {
+  const token = process.env.META_ACCESS_TOKEN;
+  const phoneId = process.env.META_WHATSAPP_PHONE_ID;
+  if (!token || !phoneId) {
+    throw new Error("Meta WhatsApp não configurado (META_ACCESS_TOKEN ou META_WHATSAPP_PHONE_ID ausente)");
   }
-  const res = await fetch(`${gateway}/Messages.json`, {
+  const res = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${phoneId}/messages`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": twilioKey,
-      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
-    body: new URLSearchParams({
-      To: to.startsWith("whatsapp:") ? to : `whatsapp:${to}`,
-      From: from.startsWith("whatsapp:") ? from : `whatsapp:${from}`,
-      Body: body,
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { body },
     }),
   });
   if (!res.ok) {
     const t = await res.text();
-    console.error(`Twilio send failed [${res.status}]: ${t}`);
+    console.error(`Meta send failed [${res.status}]: ${t}`);
   }
 }
 
@@ -58,7 +57,6 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-reminders")({
         const d0 = iso(now);
         const d3 = iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3));
 
-        // Contas a vencer hoje ou em 3 dias, ainda não pagas
         const { data: txs, error } = await (sb.from("transactions") as Row)
           .select("user_id, amount, description, date")
           .eq("type", "despesa")
@@ -77,7 +75,6 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-reminders")({
         }
         if (byUser.size === 0) return Response.json({ sent: 0 });
 
-        // Contas de WhatsApp verificadas com avisos ativos
         const { data: accounts } = await (sb.from("whatsapp_accounts") as Row)
           .select("user_id, phone")
           .eq("verified", true)
@@ -102,7 +99,7 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp-reminders")({
             `🔔 *Contas a vencer*\n\n${lines.join("\n")}\n\n💰 Total: ${brl(total)}\n\n` +
             `Responda com _paguei ..._ para registrar o pagamento.`;
           try {
-            await sendWhatsapp(phone, body);
+            await sendMetaMessage(phone, body);
             sent++;
           } catch (e) {
             console.error("send reminder error", e);

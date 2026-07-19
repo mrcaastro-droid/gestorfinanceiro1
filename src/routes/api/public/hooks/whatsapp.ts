@@ -1,18 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// deno-lint-ignore no-explicit-any
 type Row = Record<string, any>;
 
-function twiml(message: string) {
-  const escaped = message
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  return new Response(
-    `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escaped}</Message></Response>`,
-    { headers: { "Content-Type": "text/xml; charset=utf-8" } },
-  );
-}
+const GEMINI_MODEL = "gemini-2.0-flash";
+const META_API_VERSION = "v22.0";
 
 function brl(n: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n || 0);
@@ -27,13 +18,36 @@ const HELP =
   "• _gastei 50 no mercado_\n• _paguei 120 de luz_\n• _recebi 3000 de salário_\n• _almoço 35 no cartão_\n\n" +
   "Você também pode perguntar:\n• _quanto gastei esse mês?_\n• _qual meu saldo?_";
 
+async function sendMetaMessage(to: string, body: string) {
+  const token = process.env.META_ACCESS_TOKEN;
+  const phoneId = process.env.META_WHATSAPP_PHONE_ID;
+  if (!token || !phoneId) throw new Error("Meta WhatsApp não configurado");
+  const res = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${phoneId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { body },
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    console.error(`Meta send failed [${res.status}]: ${t}`);
+  }
+}
+
 async function parseMessage(body: string, categories: Array<{ id: string; name: string }>) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY ausente");
   const catList = categories.map((c) => c.name).join(", ") || "(nenhuma)";
-  const system =
+  const prompt =
     "Você é um assistente financeiro brasileiro que interpreta mensagens de WhatsApp. " +
-    "Responda SEMPRE em JSON válido. Interprete valores em reais (R$). Hoje é " + todayISO() + ". " +
+    "Responda SEMPRE em JSON válido (sem markdown, sem acentos, puro JSON). Interprete valores em reais (R$). Hoje é " + todayISO() + ". " +
     `Categorias disponíveis do usuário: ${catList}. ` +
     "Campos do JSON: intent ('add' para registrar receita/despesa, 'query' para consultar totais, 'help' caso não entenda), " +
     "type ('receita' ou 'despesa'), amount (número), description (string curta), " +
@@ -41,24 +55,27 @@ async function parseMessage(body: string, categories: Array<{ id: string; name: 
     "is_paid (true se já foi pago/recebido, senão false). " +
     "Ex.: 'gastei 50 no mercado' -> {intent:'add',type:'despesa',amount:50,description:'Mercado',category:'Alimentação',is_paid:true}.";
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: body },
-      ],
-      response_format: { type: "json_object" },
+      contents: [{
+        parts: [{
+          text: `${prompt}\n\nMensagem do usuário: ${body}`,
+        }],
+      }],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: "application/json",
+      },
     }),
   });
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`AI gateway ${res.status}: ${t}`);
+    throw new Error(`Gemini API ${res.status}: ${t}`);
   }
   const json = await res.json();
-  const content = json?.choices?.[0]?.message?.content ?? "{}";
+  const content = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
   try {
     return JSON.parse(content);
   } catch {
@@ -69,23 +86,46 @@ async function parseMessage(body: string, categories: Array<{ id: string; name: 
 export const Route = createFileRoute("/api/public/hooks/whatsapp")({
   server: {
     handlers: {
+      GET: async ({ request }) => {
+        const url = new URL(request.url);
+        const mode = url.searchParams.get("hub.mode");
+        const token = url.searchParams.get("hub.verify_token");
+        const challenge = url.searchParams.get("hub.challenge");
+
+        if (mode === "subscribe" && token === process.env.META_WEBHOOK_VERIFY_TOKEN) {
+          return new Response(challenge, { status: 200 });
+        }
+        return new Response("Forbidden", { status: 403 });
+      },
+
       POST: async ({ request }) => {
         const url = new URL(request.url);
-        const token = url.searchParams.get("token");
+        const queryToken = url.searchParams.get("token");
+        const authHeader = request.headers.get("apikey");
         const ok =
-          (!!token && token === process.env.SUPABASE_PUBLISHABLE_KEY) ||
-          (!!token && token === process.env.WHATSAPP_WEBHOOK_TOKEN);
+          (!!queryToken && queryToken === process.env.SUPABASE_PUBLISHABLE_KEY) ||
+          (!!queryToken && queryToken === process.env.WHATSAPP_WEBHOOK_TOKEN) ||
+          (!!authHeader && authHeader === process.env.SUPABASE_PUBLISHABLE_KEY);
         if (!ok) return new Response("Forbidden", { status: 403 });
 
-        const form = await request.formData();
-        const from = String(form.get("From") ?? "").replace("whatsapp:", "").trim();
-        const bodyRaw = String(form.get("Body") ?? "").trim();
-        if (!from) return twiml("Não consegui identificar seu número.");
+        const body = await request.json();
+        const entry = body?.entry?.[0];
+        const change = entry?.changes?.[0];
+        const value = change?.value;
+        const message = value?.messages?.[0];
+
+        if (!message || message.type !== "text") {
+          return new Response("OK", { status: 200 });
+        }
+
+        const from = String(message.from ?? "").trim();
+        const bodyRaw = String(message.text?.body ?? "").trim();
+        if (!from) return new Response("OK", { status: 200 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const sb = supabaseAdmin as Row;
 
-        // 1) Fluxo de vinculação por código
+        // Fluxo de vinculação por código
         const maybeCode = bodyRaw.replace(/vincular/i, "").trim().toUpperCase();
         if (/^[A-Z0-9]{6}$/.test(maybeCode)) {
           const { data: acc } = await (sb.from("whatsapp_accounts") as Row)
@@ -96,11 +136,12 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
             await (sb.from("whatsapp_accounts") as Row)
               .update({ phone: from, verified: true, link_code: null })
               .eq("id", acc.id);
-            return twiml("✅ WhatsApp vinculado com sucesso!\n\n" + HELP);
+            await sendMetaMessage(from, "✅ WhatsApp vinculado com sucesso!\n\n" + HELP);
+            return new Response("OK", { status: 200 });
           }
         }
 
-        // 2) Identifica usuário verificado por telefone
+        // Identifica usuário verificado por telefone
         const { data: account } = await (sb.from("whatsapp_accounts") as Row)
           .select("user_id, verified")
           .eq("phone", from)
@@ -108,16 +149,19 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
           .maybeSingle();
 
         if (!account) {
-          return twiml(
+          await sendMetaMessage(
+            from,
             "👋 Olá! Seu número ainda não está vinculado a nenhuma conta.\n\n" +
               "Abra o app em *Configurações → WhatsApp*, gere o seu código e me envie aqui para vincular.",
           );
+          return new Response("OK", { status: 200 });
         }
 
         const userId = account.user_id as string;
 
         if (!bodyRaw || /^(ajuda|help|oi|olá|ola|menu)$/i.test(bodyRaw)) {
-          return twiml(HELP);
+          await sendMetaMessage(from, HELP);
+          return new Response("OK", { status: 200 });
         }
 
         // Carrega categorias do usuário
@@ -131,7 +175,8 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
           parsed = await parseMessage(bodyRaw, categories);
         } catch (e) {
           console.error("parseMessage error", e);
-          return twiml("😕 Tive um problema para entender agora. Tente novamente em instantes.");
+          await sendMetaMessage(from, "😕 Tive um problema para entender agora. Tente novamente em instantes.");
+          return new Response("OK", { status: 200 });
         }
 
         if (parsed.intent === "query") {
@@ -150,9 +195,11 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
             else despesas += Number(t.amount);
           }
           const transfLine = transferido > 0 ? `\n🔄 Transferido/Reservado: ${brl(transferido)}` : "";
-          return twiml(
+          await sendMetaMessage(
+            from,
             `📊 *Resumo do mês*\n\n🟢 Receitas: ${brl(receitas)}\n🔴 Despesas: ${brl(despesas)}${transfLine}\n💰 Saldo: ${brl(receitas - despesas)}`,
           );
+          return new Response("OK", { status: 200 });
         }
 
         if (parsed.intent === "add" && Number(parsed.amount) > 0) {
@@ -175,17 +222,21 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
           });
           if (error) {
             console.error("insert transaction error", error);
-            return twiml("😕 Não consegui salvar o lançamento. Tente novamente.");
+            await sendMetaMessage(from, "😕 Não consegui salvar o lançamento. Tente novamente.");
+            return new Response("OK", { status: 200 });
           }
           const emoji = type === "receita" ? "🟢" : "🔴";
           const label = type === "receita" ? "Receita" : "Despesa";
           const catTxt = categoryId ? `\n🏷️ ${parsed.category}` : "";
-          return twiml(
+          await sendMetaMessage(
+            from,
             `${emoji} *${label} registrada!*\n\n💵 ${brl(Number(parsed.amount))}\n📝 ${parsed.description ?? "Sem descrição"}${catTxt}`,
           );
+          return new Response("OK", { status: 200 });
         }
 
-        return twiml(HELP);
+        await sendMetaMessage(from, HELP);
+        return new Response("OK", { status: 200 });
       },
     },
   },
