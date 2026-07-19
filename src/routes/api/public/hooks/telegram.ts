@@ -3,6 +3,9 @@ import { sendTelegramMessage, parseMessage, HELP, brl, todayISO } from "@/lib/te
 
 type Row = Record<string, any>;
 
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const USER_ID = process.env.TELEGRAM_USER_ID;
+
 export const Route = createFileRoute("/api/public/hooks/telegram")({
   server: {
     handlers: {
@@ -14,64 +17,35 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
         }
 
         const chatId = String(message.chat.id);
-        const fromId = String(message.from.id);
         const text = String(message.text ?? "").trim();
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const sb = supabaseAdmin as Row;
+        // Só responde ao chat_id configurado
+        if (chatId !== CHAT_ID) {
+          await sendTelegramMessage(chatId, "❌ Conta não autorizada.");
+          return new Response("OK", { status: 200 });
+        }
 
-        // Comando /start
         if (text === "/start") {
-          await sendTelegramMessage(chatId,
-            "👋 *Bem-vindo ao Gestor Financeiro!*\n\n" +
-            "Envie o código de vinculação gerado no app para conectar sua conta.\n\n" +
-            "Ou me mande mensagens como:\n" +
-            "• _gastei 50 no mercado_\n• _paguei 120 de luz_\n• _recebi 3000 de salário_"
-          );
+          await sendTelegramMessage(chatId, "👋 *Bem-vindo ao Gestor Financeiro!*\n\n" + HELP);
           return new Response("OK", { status: 200 });
         }
-
-        // Fluxo de vinculação por código (6 caracteres)
-        const maybeCode = text.toUpperCase();
-        if (/^[A-Z0-9]{6}$/.test(maybeCode)) {
-          const { data: acc } = await (sb.from("telegram_accounts") as Row)
-            .select("id, user_id")
-            .eq("link_code", maybeCode)
-            .maybeSingle();
-          if (acc) {
-            await (sb.from("telegram_accounts") as Row)
-              .update({ chat_id: chatId, verified: true, link_code: null })
-              .eq("id", acc.id);
-            await sendTelegramMessage(chatId, "✅ Conta vinculada com sucesso!\n\n" + HELP);
-            return new Response("OK", { status: 200 });
-          }
-        }
-
-        // Busca conta verificada
-        const { data: account } = await (sb.from("telegram_accounts") as Row)
-          .select("user_id")
-          .eq("chat_id", chatId)
-          .eq("verified", true)
-          .maybeSingle();
-
-        if (!account) {
-          await sendTelegramMessage(chatId,
-            "👋 Seu Telegram ainda não está vinculado.\n\n" +
-            "Abra o app em *Configurações*, gere o código e envie aqui."
-          );
-          return new Response("OK", { status: 200 });
-        }
-
-        const userId = account.user_id as string;
 
         if (/^(ajuda|help|oi|olá|ola|menu)$/i.test(text)) {
           await sendTelegramMessage(chatId, HELP);
           return new Response("OK", { status: 200 });
         }
 
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const sb = supabaseAdmin as Row;
+
+        if (!USER_ID) {
+          await sendTelegramMessage(chatId, "❌ Usuário não configurado.");
+          return new Response("OK", { status: 200 });
+        }
+
         const { data: cats } = await (sb.from("categories") as Row)
           .select("id, name")
-          .eq("user_id", userId);
+          .eq("user_id", USER_ID);
         const categories = (cats ?? []) as Array<{ id: string; name: string }>;
 
         let parsed: Row;
@@ -89,7 +63,7 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
           const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
           const { data: txs } = await (sb.from("transactions") as Row)
             .select("type, amount")
-            .eq("user_id", userId)
+            .eq("user_id", USER_ID)
             .gte("date", start)
             .lte("date", end);
           let receitas = 0, despesas = 0, transferido = 0;
@@ -115,7 +89,7 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
             categoryId = match?.id ?? null;
           }
           const { error } = await (sb.from("transactions") as Row).insert({
-            user_id: userId,
+            user_id: USER_ID,
             type,
             amount: Number(parsed.amount),
             date: todayISO(),
