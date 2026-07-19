@@ -8,7 +8,7 @@ import {
   PieChart, Pie, Cell, Legend, AreaChart, Area, LineChart, Line, ComposedChart,
 } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowDownRight, ArrowUpRight, Scale, PiggyBank, ArrowLeftRight, HandCoins, Wallet, Info, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Scale, PiggyBank, ArrowLeftRight, HandCoins, Wallet, Info, TrendingUp, TrendingDown, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHideValues, maskCurrency } from "@/lib/hide-values";
 
@@ -85,6 +85,21 @@ function ReportsPage() {
     };
   }, [rows]);
 
+  const accountMap = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a])), [accounts]);
+
+  const reservesBreakdown = useMemo(() => {
+    const map = new Map<string, number>();
+    yearRows
+      .filter((t) => t.type === "transferencia" && !t.is_yield && t.transfer_account_id)
+      .forEach((t) => {
+        const id = t.transfer_account_id as string;
+        map.set(id, (map.get(id) ?? 0) + Number(t.amount));
+      });
+    return Array.from(map.entries())
+      .map(([id, value]) => ({ id, name: accountMap.get(id)?.name ?? "Conta desconhecida", value }))
+      .sort((a, b) => b.value - a.value);
+  }, [yearRows, accountMap]);
+
   // Monthly cash flow across the whole year (respects category/account/type filters).
   const monthly = useMemo(() => MONTHS.map((m, idx) => {
     const mr = yearRows.filter((t) => new Date(t.date + "T00:00:00").getMonth() === idx);
@@ -148,6 +163,7 @@ function ReportsPage() {
   const periodLabel = month === "todos" ? `Ano de ${year}` : `${MONTHS_FULL[Number(month)]} de ${year}`;
   const breakdownLabel = type === "receita" ? "Receitas" : type === "transferencia" ? "Transferências" : "Despesas";
   const [salaryCategoryId, setSalaryCategoryId] = useState<string>("todas");
+  const [showReservesBreakdown, setShowReservesBreakdown] = useState(false);
 
   const incomeCategories = useMemo(
     () => (categories ?? []).filter((c) => c.type === "receita" && !c.parent_id),
@@ -284,7 +300,28 @@ function ReportsPage() {
             <FluxoRow label="Total disponível" hint="Recursos que estiveram disponíveis para uso." value={totals.disponivel} tone="primary" op="=" hidden={hidden} icon={Wallet} strong />
           </div>
           <FluxoRow label="Despesas" hint="Saídas definitivas do período." value={totals.exp} tone="expense" op="−" hidden={hidden} icon={TrendingDown} />
-          <FluxoRow label="Guardado em reservas" hint="Transferências internas para caixinhas." value={totals.transf} tone="neutral" op="−" hidden={hidden} icon={PiggyBank} />
+          <button type="button" onClick={() => setShowReservesBreakdown(!showReservesBreakdown)} className="w-full text-left">
+            <FluxoRow
+              label="Guardado em reservas"
+              hint="Transferências internas para caixinhas."
+              value={totals.transf}
+              tone="neutral"
+              op="−"
+              hidden={hidden}
+              icon={PiggyBank}
+              right={showReservesBreakdown ? <ChevronDown className="size-3.5 text-muted-foreground" /> : <ChevronRight className="size-3.5 text-muted-foreground" />}
+            />
+          </button>
+          {showReservesBreakdown && reservesBreakdown.length > 0 && (
+            <div className="ml-7 mt-1 space-y-1 border-l-2 border-border pl-3">
+              {reservesBreakdown.map((r) => (
+                <div key={r.id} className="flex items-center justify-between py-0.5">
+                  <span className="text-xs text-muted-foreground">{r.name}</span>
+                  <span className="text-xs tabular font-medium">{maskCurrency(r.value, hidden)}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="border-t border-border mt-2 pt-2">
             <FluxoRow
               label="Caixa disponível"
@@ -531,6 +568,7 @@ function FluxoRow({
   hidden,
   icon: Icon,
   strong,
+  right,
 }: {
   label: string;
   hint: string;
@@ -540,6 +578,7 @@ function FluxoRow({
   hidden: boolean;
   icon: typeof ArrowUpRight;
   strong?: boolean;
+  right?: React.ReactNode;
 }) {
   const color =
     tone === "income" ? "text-income" : tone === "expense" ? "text-expense" : tone === "primary" ? "text-primary" : "text-foreground";
@@ -558,6 +597,7 @@ function FluxoRow({
       <span className={cn("tabular text-sm shrink-0", strong ? "text-base font-bold" : "font-medium", color)}>
         {maskCurrency(value, hidden)}
       </span>
+      {right && <span className="shrink-0">{right}</span>}
     </div>
   );
 }
