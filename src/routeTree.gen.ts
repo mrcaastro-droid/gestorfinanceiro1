@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTransferenciasRouteImport } from './routes/_authenticated/transferencias'
+import { Route as AuthenticatedResgatesRouteImport } from './routes/_authenticated/resgates'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedRecorrenciasRouteImport } from './routes/_authenticated/recorrencias'
 import { Route as AuthenticatedReceitasRouteImport } from './routes/_authenticated/receitas'
@@ -53,6 +54,11 @@ const AuthenticatedTransferenciasRoute =
     path: '/transferencias',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedResgatesRoute = AuthenticatedResgatesRouteImport.update({
+  id: '/resgates',
+  path: '/resgates',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/receitas': typeof AuthenticatedReceitasRoute
   '/recorrencias': typeof AuthenticatedRecorrenciasRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/resgates': typeof AuthenticatedResgatesRoute
   '/transferencias': typeof AuthenticatedTransferenciasRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
   '/api/public/hooks/whatsapp-reminders': typeof ApiPublicHooksWhatsappRemindersRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
   '/receitas': typeof AuthenticatedReceitasRoute
   '/recorrencias': typeof AuthenticatedRecorrenciasRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/resgates': typeof AuthenticatedResgatesRoute
   '/transferencias': typeof AuthenticatedTransferenciasRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
   '/api/public/hooks/whatsapp-reminders': typeof ApiPublicHooksWhatsappRemindersRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/_authenticated/receitas': typeof AuthenticatedReceitasRoute
   '/_authenticated/recorrencias': typeof AuthenticatedRecorrenciasRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/resgates': typeof AuthenticatedResgatesRoute
   '/_authenticated/transferencias': typeof AuthenticatedTransferenciasRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
   '/api/public/hooks/whatsapp-reminders': typeof ApiPublicHooksWhatsappRemindersRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
     | '/receitas'
     | '/recorrencias'
     | '/relatorios'
+    | '/resgates'
     | '/transferencias'
     | '/api/public/hooks/whatsapp'
     | '/api/public/hooks/whatsapp-reminders'
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/receitas'
     | '/recorrencias'
     | '/relatorios'
+    | '/resgates'
     | '/transferencias'
     | '/api/public/hooks/whatsapp'
     | '/api/public/hooks/whatsapp-reminders'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/_authenticated/receitas'
     | '/_authenticated/recorrencias'
     | '/_authenticated/relatorios'
+    | '/_authenticated/resgates'
     | '/_authenticated/transferencias'
     | '/api/public/hooks/whatsapp'
     | '/api/public/hooks/whatsapp-reminders'
@@ -287,6 +299,13 @@ declare module '@tanstack/react-router' {
       path: '/transferencias'
       fullPath: '/transferencias'
       preLoaderRoute: typeof AuthenticatedTransferenciasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/resgates': {
+      id: '/_authenticated/resgates'
+      path: '/resgates'
+      fullPath: '/resgates'
+      preLoaderRoute: typeof AuthenticatedResgatesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/relatorios': {
@@ -395,6 +414,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReceitasRoute: typeof AuthenticatedReceitasRoute
   AuthenticatedRecorrenciasRoute: typeof AuthenticatedRecorrenciasRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedResgatesRoute: typeof AuthenticatedResgatesRoute
   AuthenticatedTransferenciasRoute: typeof AuthenticatedTransferenciasRoute
 }
 
@@ -410,6 +430,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReceitasRoute: AuthenticatedReceitasRoute,
   AuthenticatedRecorrenciasRoute: AuthenticatedRecorrenciasRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedResgatesRoute: AuthenticatedResgatesRoute,
   AuthenticatedTransferenciasRoute: AuthenticatedTransferenciasRoute,
 }
 
