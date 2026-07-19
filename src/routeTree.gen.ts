@@ -26,6 +26,8 @@ import { Route as AuthenticatedRecorrenciasRouteImport } from './routes/_authent
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedResgatesRouteImport } from './routes/_authenticated/resgates'
 import { Route as AuthenticatedTransferenciasRouteImport } from './routes/_authenticated/transferencias'
+import { Route as ApiPublicHooksTelegramRouteImport } from './routes/api/public/hooks/telegram'
+import { Route as ApiPublicHooksTelegramRemindersRouteImport } from './routes/api/public/hooks/telegram-reminders'
 import { Route as ApiPublicHooksWhatsappRouteImport } from './routes/api/public/hooks/whatsapp'
 import { Route as ApiPublicHooksWhatsappRemindersRouteImport } from './routes/api/public/hooks/whatsapp-reminders'
 
@@ -117,6 +119,17 @@ const AuthenticatedTransferenciasRoute =
     path: '/transferencias',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicHooksTelegramRoute = ApiPublicHooksTelegramRouteImport.update({
+  id: '/api/public/hooks/telegram',
+  path: '/api/public/hooks/telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksTelegramRemindersRoute =
+  ApiPublicHooksTelegramRemindersRouteImport.update({
+    id: '/api/public/hooks/telegram-reminders',
+    path: '/api/public/hooks/telegram-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksWhatsappRoute = ApiPublicHooksWhatsappRouteImport.update({
   id: '/api/public/hooks/whatsapp',
   path: '/api/public/hooks/whatsapp',
@@ -146,6 +159,8 @@ export interface FileRoutesByFullPath {
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/resgates': typeof AuthenticatedResgatesRoute
   '/transferencias': typeof AuthenticatedTransferenciasRoute
+  '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
+  '/api/public/hooks/telegram-reminders': typeof ApiPublicHooksTelegramRemindersRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
   '/api/public/hooks/whatsapp-reminders': typeof ApiPublicHooksWhatsappRemindersRoute
 }
@@ -166,6 +181,8 @@ export interface FileRoutesByTo {
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/resgates': typeof AuthenticatedResgatesRoute
   '/transferencias': typeof AuthenticatedTransferenciasRoute
+  '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
+  '/api/public/hooks/telegram-reminders': typeof ApiPublicHooksTelegramRemindersRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
   '/api/public/hooks/whatsapp-reminders': typeof ApiPublicHooksWhatsappRemindersRoute
 }
@@ -188,6 +205,8 @@ export interface FileRoutesById {
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/resgates': typeof AuthenticatedResgatesRoute
   '/_authenticated/transferencias': typeof AuthenticatedTransferenciasRoute
+  '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
+  '/api/public/hooks/telegram-reminders': typeof ApiPublicHooksTelegramRemindersRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
   '/api/public/hooks/whatsapp-reminders': typeof ApiPublicHooksWhatsappRemindersRoute
 }
@@ -210,6 +229,8 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/resgates'
     | '/transferencias'
+    | '/api/public/hooks/telegram'
+    | '/api/public/hooks/telegram-reminders'
     | '/api/public/hooks/whatsapp'
     | '/api/public/hooks/whatsapp-reminders'
   fileRoutesByTo: FileRoutesByTo
@@ -230,6 +251,8 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/resgates'
     | '/transferencias'
+    | '/api/public/hooks/telegram'
+    | '/api/public/hooks/telegram-reminders'
     | '/api/public/hooks/whatsapp'
     | '/api/public/hooks/whatsapp-reminders'
   id:
@@ -251,6 +274,8 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios'
     | '/_authenticated/resgates'
     | '/_authenticated/transferencias'
+    | '/api/public/hooks/telegram'
+    | '/api/public/hooks/telegram-reminders'
     | '/api/public/hooks/whatsapp'
     | '/api/public/hooks/whatsapp-reminders'
   fileRoutesById: FileRoutesById
@@ -260,6 +285,8 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicHooksTelegramRoute: typeof ApiPublicHooksTelegramRoute
+  ApiPublicHooksTelegramRemindersRoute: typeof ApiPublicHooksTelegramRemindersRoute
   ApiPublicHooksWhatsappRoute: typeof ApiPublicHooksWhatsappRoute
   ApiPublicHooksWhatsappRemindersRoute: typeof ApiPublicHooksWhatsappRemindersRoute
 }
@@ -385,6 +412,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTransferenciasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/telegram': {
+      id: '/api/public/hooks/telegram'
+      path: '/api/public/hooks/telegram'
+      fullPath: '/api/public/hooks/telegram'
+      preLoaderRoute: typeof ApiPublicHooksTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/telegram-reminders': {
+      id: '/api/public/hooks/telegram-reminders'
+      path: '/api/public/hooks/telegram-reminders'
+      fullPath: '/api/public/hooks/telegram-reminders'
+      preLoaderRoute: typeof ApiPublicHooksTelegramRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/whatsapp': {
       id: '/api/public/hooks/whatsapp'
       path: '/api/public/hooks/whatsapp'
@@ -442,6 +483,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicHooksTelegramRoute: ApiPublicHooksTelegramRoute,
+  ApiPublicHooksTelegramRemindersRoute: ApiPublicHooksTelegramRemindersRoute,
   ApiPublicHooksWhatsappRoute: ApiPublicHooksWhatsappRoute,
   ApiPublicHooksWhatsappRemindersRoute: ApiPublicHooksWhatsappRemindersRoute,
 }
