@@ -147,6 +147,37 @@ function ReportsPage() {
   const subTotal = bySubcategory.reduce((s, c) => s + c.value, 0);
   const periodLabel = month === "todos" ? `Ano de ${year}` : `${MONTHS_FULL[Number(month)]} de ${year}`;
   const breakdownLabel = type === "receita" ? "Receitas" : type === "transferencia" ? "Transferências" : "Despesas";
+  const [salaryCategoryId, setSalaryCategoryId] = useState<string>("todas");
+
+  const incomeCategories = useMemo(
+    () => (categories ?? []).filter((c) => c.type === "receita" && !c.parent_id),
+    [categories],
+  );
+
+  const salaryMonthly = useMemo(() => {
+    const catIds = new Set<string>();
+    if (salaryCategoryId === "todas") {
+      incomeCategories.forEach((c) => { catIds.add(c.id); });
+    } else {
+      catIds.add(salaryCategoryId);
+      (categories ?? []).forEach((c) => { if (c.parent_id === salaryCategoryId) catIds.add(c.id); });
+    }
+    return MONTHS.map((m, idx) => {
+      const total = (transactions ?? [])
+        .filter((t) => {
+          const d = new Date(t.date + "T00:00:00");
+          return d.getFullYear() === year
+            && d.getMonth() === idx
+            && t.type === "receita"
+            && !t.is_reserve_withdrawal
+            && t.category_id
+            && catIds.has(t.category_id);
+        })
+        .reduce((s, t) => s + Number(t.amount), 0);
+      return { mes: m, Salario: total };
+    });
+  }, [transactions, year, salaryCategoryId, incomeCategories, categories]);
+
   const hasTransfers = monthly.some((m) => m.Transferido > 0);
   const hasResgates = monthly.some((m) => m.Resgates > 0);
 
@@ -312,6 +343,44 @@ function ReportsPage() {
             {hasTransfers && <Bar dataKey="Transferido" stackId="out" fill="var(--primary)" radius={[4, 4, 0, 0]} />}
             <Line dataKey="Caixa" type="monotone" stroke="var(--foreground)" strokeWidth={2} dot={false} />
           </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Evolução Salarial */}
+      <div className="bg-card border border-border rounded-2xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold">Evolução Salarial</h3>
+            <p className="text-xs text-muted-foreground">Acompanhe a variação do salário mês a mês.</p>
+          </div>
+          <div className="w-48">
+            <Select value={salaryCategoryId} onValueChange={setSalaryCategoryId}>
+              <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas as receitas</SelectItem>
+                {incomeCategories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={salaryMonthly}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-20" vertical={false} />
+            <XAxis dataKey="mes" fontSize={11} tickLine={false} axisLine={false} />
+            <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => (hidden ? "•••" : formatCompact(Number(v)))} />
+            <Tooltip formatter={(v: number) => maskCurrency(Number(v), hidden)} contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Line
+              type="monotone"
+              dataKey="Salario"
+              stroke="#10b981"
+              strokeWidth={3}
+              dot={{ r: 5, fill: "#10b981", strokeWidth: 2, stroke: "var(--card)" }}
+              activeDot={{ r: 7, fill: "#10b981", strokeWidth: 2, stroke: "var(--card)" }}
+            />
+          </LineChart>
         </ResponsiveContainer>
       </div>
 
