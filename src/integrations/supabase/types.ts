@@ -380,6 +380,30 @@ export type Database = {
           },
         ]
       }
+      month_locks: {
+        Row: {
+          id: string
+          locked_at: string
+          month: number
+          user_id: string
+          year: number
+        }
+        Insert: {
+          id?: string
+          locked_at?: string
+          month: number
+          user_id: string
+          year: number
+        }
+        Update: {
+          id?: string
+          locked_at?: string
+          month?: number
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -861,6 +885,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_month_locked: {
+        Args: { _date: string; _user_id: string }
+        Returns: boolean
+      }
       recalc_account_balance: {
         Args: { _account_id: string }
         Returns: undefined
