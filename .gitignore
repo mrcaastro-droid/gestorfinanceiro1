@@ -18,6 +18,9 @@ dist-ssr
 
 # Wrangler / Cloudflare
 .wrangler/
+
+# Environment files with secrets
+.env
 .dev.vars
 
 # Editor directories and files
