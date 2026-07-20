@@ -1,0 +1,203 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://xmranseveswueoriwovo.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "gestor-financeiro-mcp",
+      "version": "0.1.0",
+      "title": "Gestor Financeiro"
+    },
+    "tools": [
+      {
+        "name": "list_accounts",
+        "title": "Listar contas",
+        "description": "Lista as contas bancárias do usuário com saldo atual.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "include_archived": {
+              "description": "Incluir contas arquivadas. Padrão: false.",
+              "type": "boolean"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_categories",
+        "title": "Listar categorias",
+        "description": "Lista categorias (e subcategorias) do usuário.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "Filtrar por tipo de categoria.",
+              "type": "string",
+              "enum": [
+                "receita",
+                "despesa",
+                "transferencia",
+                "ambos"
+              ]
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_transactions",
+        "title": "Listar transações",
+        "description": "Lista transações do usuário. Aceita filtros opcionais por tipo, intervalo de datas (ISO AAAA-MM-DD), categoria, conta e status de pagamento.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "receita",
+                "despesa",
+                "transferencia"
+              ]
+            },
+            "from": {
+              "description": "Data inicial (AAAA-MM-DD)",
+              "type": "string"
+            },
+            "to": {
+              "description": "Data final (AAAA-MM-DD)",
+              "type": "string"
+            },
+            "category_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "account_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "is_paid": {
+              "type": "boolean"
+            },
+            "limit": {
+              "description": "Máx. resultados (padrão 50, máximo 200).",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_transaction",
+        "title": "Registrar transação",
+        "description": "Cria uma receita, despesa ou transferência para o usuário autenticado. Use list_accounts e list_categories primeiro para obter os IDs corretos.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "receita",
+                "despesa",
+                "transferencia"
+              ]
+            },
+            "amount": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Valor em reais."
+            },
+            "date": {
+              "description": "Data no formato AAAA-MM-DD. Padrão: hoje.",
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "account_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "category_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "is_paid": {
+              "description": "Se já foi pago/recebido. Padrão: true.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "amount"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "month_summary",
+        "title": "Resumo mensal",
+        "description": "Retorna totais de receitas, despesas e transferências do mês informado (ou mês atual).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "year": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "month": {
+              "description": "1-12",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
