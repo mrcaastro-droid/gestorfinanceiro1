@@ -3,9 +3,6 @@ import { sendTelegramMessage, parseMessage, HELP, brl, todayISO } from "@/lib/te
 
 type Row = Record<string, any>;
 
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const USER_ID = process.env.TELEGRAM_USER_ID;
-
 export const Route = createFileRoute("/api/public/hooks/telegram")({
   server: {
     handlers: {
@@ -19,29 +16,61 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
         const chatId = String(message.chat.id);
         const text = String(message.text ?? "").trim();
 
-        // Só responde ao chat_id configurado
-        if (chatId !== CHAT_ID) {
-          await sendTelegramMessage(chatId, "❌ Conta não autorizada.");
-          return new Response("OK", { status: 200 });
-        }
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const sb = supabaseAdmin as Row;
 
         if (text === "/start") {
-          await sendTelegramMessage(chatId, "👋 *Bem-vindo ao Gestor Financeiro!*\n\n" + HELP);
+          const { data: existing } = await (sb.from("telegram_accounts") as Row)
+            .select("id, user_id, verified")
+            .eq("chat_id", chatId)
+            .eq("verified", true)
+            .maybeSingle();
+
+          if (existing) {
+            await sendTelegramMessage(chatId, "👋 *Bem-vindo de volta ao Gestor Financeiro!*\n\n" + HELP);
+          } else {
+            await sendTelegramMessage(chatId, "👋 *Bem-vindo ao Gestor Financeiro!*\n\nPara começar, vincule sua conta:\n1. Acesse as Configuracoes > Telegram no aplicativo\n2. Gere um codigo\n3. Envie o codigo aqui\n\n" + HELP);
+          }
           return new Response("OK", { status: 200 });
         }
 
-        if (/^(ajuda|help|oi|olá|ola|menu)$/i.test(text)) {
+        if (/^(ajuda|help|oi|ola|menu)$/i.test(text)) {
           await sendTelegramMessage(chatId, HELP);
           return new Response("OK", { status: 200 });
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const sb = supabaseAdmin as Row;
+        // Verificar se e um codigo de vinculacao (6 caracteres alfanumericos)
+        if (/^[A-Z0-9]{6}$/i.test(text)) {
+          const { data: account } = await (sb.from("telegram_accounts") as Row)
+            .select("id, user_id")
+            .eq("link_code", text.toUpperCase())
+            .eq("verified", false)
+            .maybeSingle();
 
-        if (!USER_ID) {
-          await sendTelegramMessage(chatId, "❌ Usuário não configurado.");
+          if (account) {
+            await (sb.from("telegram_accounts") as Row)
+              .update({ verified: true, chat_id: chatId, link_code: null })
+              .eq("id", account.id);
+            await sendTelegramMessage(chatId, "✅ *Conta vinculada com sucesso!*\n\nAgora voce pode registrar gastos e receitas por mensagem.\n\n" + HELP);
+          } else {
+            await sendTelegramMessage(chatId, "❌ Codigo invalido ou ja utilizado.\n\nGere um novo codigo nas Configuracoes > Telegram do aplicativo.");
+          }
           return new Response("OK", { status: 200 });
         }
+
+        // Verificar se o chat esta vinculado
+        const { data: linkedAccount } = await (sb.from("telegram_accounts") as Row)
+          .select("id, user_id")
+          .eq("chat_id", chatId)
+          .eq("verified", true)
+          .maybeSingle();
+
+        if (!linkedAccount) {
+          await sendTelegramMessage(chatId, "❌ Conta nao vinculada.\n\nEnvie /start para ver como vincular.");
+          return new Response("OK", { status: 200 });
+        }
+
+        const USER_ID = linkedAccount.user_id;
 
         const { data: cats } = await (sb.from("categories") as Row)
           .select("id, name")
@@ -74,7 +103,7 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
           }
           const transfLine = transferido > 0 ? `\n🔄 Transferido/Reservado: ${brl(transferido)}` : "";
           await sendTelegramMessage(chatId,
-            `📊 *Resumo do mês*\n\n🟢 Receitas: ${brl(receitas)}\n🔴 Despesas: ${brl(despesas)}${transfLine}\n💰 Saldo: ${brl(receitas - despesas)}`
+            `📊 *Resumo do mes*\n\n🟢 Receitas: ${brl(receitas)}\n🔴 Despesas: ${brl(despesas)}${transfLine}\n💰 Saldo: ${brl(receitas - despesas)}`
           );
           return new Response("OK", { status: 200 });
         }
@@ -99,14 +128,14 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
           });
           if (error) {
             console.error("insert transaction error", error);
-            await sendTelegramMessage(chatId, "😕 Não consegui salvar o lançamento. Tente novamente.");
+            await sendTelegramMessage(chatId, "😕 Nao consegui salvar o lancamento. Tente novamente.");
             return new Response("OK", { status: 200 });
           }
           const emoji = type === "receita" ? "🟢" : "🔴";
           const label = type === "receita" ? "Receita" : "Despesa";
           const catTxt = categoryId ? `\n🏷️ ${parsed.category}` : "";
           await sendTelegramMessage(chatId,
-            `${emoji} *${label} registrada!*\n\n💵 ${brl(Number(parsed.amount))}\n📝 ${parsed.description ?? "Sem descrição"}${catTxt}`
+            `${emoji} *${label} registrada!*\n\n💵 ${brl(Number(parsed.amount))}\n📝 ${parsed.description ?? "Sem descricao"}${catTxt}`
           );
           return new Response("OK", { status: 200 });
         }
