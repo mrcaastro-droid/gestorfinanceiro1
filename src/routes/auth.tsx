@@ -10,6 +10,9 @@ import { toast } from "sonner";
 import { Wallet, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Entrar — Gestor Financeiro" },
@@ -22,6 +25,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { next } = Route.useSearch();
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState("login");
 
@@ -31,8 +35,11 @@ function AuthPage() {
   const [forgotEmail, setForgotEmail] = useState("");
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/dashboard", replace: true });
-  }, [user, loading, navigate]);
+    if (!loading && user) {
+      if (next) window.location.replace(next);
+      else navigate({ to: "/dashboard", replace: true });
+    }
+  }, [user, loading, navigate, next]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -41,7 +48,8 @@ function AuthPage() {
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Bem-vindo de volta!");
-    navigate({ to: "/dashboard", replace: true });
+    if (next) window.location.replace(next);
+    else navigate({ to: "/dashboard", replace: true });
   }
 
   async function handleSignup(e: React.FormEvent) {
@@ -50,12 +58,16 @@ function AuthPage() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name }, emailRedirectTo: window.location.origin },
+      options: {
+        data: { name },
+        emailRedirectTo: next ? `${window.location.origin}${next}` : window.location.origin,
+      },
     });
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Conta criada! Você já pode usar o app.");
-    navigate({ to: "/dashboard", replace: true });
+    if (next) window.location.replace(next);
+    else navigate({ to: "/dashboard", replace: true });
   }
 
   async function handleForgot(e: React.FormEvent) {
