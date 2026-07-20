@@ -26,36 +26,50 @@ export const HELP =
 export async function parseMessage(body: string, categories: Array<{ id: string; name: string }>) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY ausente");
-  const catList = categories.map((c) => c.name).join(", ") || "(nenhuma)";
-  const prompt =
-    "Você é um assistente financeiro brasileiro que interpreta mensagens. " +
-    "Responda SEMPRE em JSON válido (sem markdown, sem acentos, puro JSON). Interprete valores em reais (R$). Hoje é " + todayISO() + ". " +
-    `Categorias disponíveis do usuário: ${catList}. ` +
-    "Campos do JSON: intent ('add' para registrar receita/despesa, 'query' para consultar totais, 'help' caso não entenda), " +
-    "type ('receita' ou 'despesa'), amount (número), description (string curta), " +
-    "category (escolha o nome MAIS parecido da lista de categorias, ou null), " +
-    "is_paid (true se já foi pago/recebido, senão false). " +
-    "Ex.: 'gastei 50 no mercado' -> {intent:'add',type:'despesa',amount:50,description:'Mercado',category:'Alimentação',is_paid:true}.";
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+  // Se nao tem categorias, retorna help
+  if (!categories || categories.length === 0) {
+    return { intent: "help" };
+  }
+
+  const catList = categories.map((c) => c.name).join(", ");
+  const prompt =
+    "Voce e um assistente financeiro brasileiro que interpreta mensagens. " +
+    "Responda SEMPRE em JSON valido (sem markdown, sem acentos, puro JSON). Interprete valores em reais (R$). Hoje e " + todayISO() + ". " +
+    `Categorias disponiveis do usuario: ${catList}. ` +
+    "Campos do JSON: intent ('add' para registrar receita/despesa, 'query' para consultar totais, 'help' caso nao entenda), " +
+    "type ('receita' ou 'despesa'), amount (numero), description (string curta), " +
+    "category (escolha o nome MAIS parecido da lista de categorias, ou null), " +
+    "is_paid (true se ja foi pago/recebido, senao false). " +
+    "Ex.: 'gastei 50 no mercado' -> {intent:'add',type:'despesa',amount:50,description:'Mercado',category:'Alimentacao',is_paid:true}.";
+
+  const model = "gemini-2.0-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{
-        parts: [{ text: `${prompt}\n\nMensagem do usuário: ${body}` }],
+        parts: [{ text: `${prompt}\n\nMensagem do usuario: ${body}` }],
       }],
       generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
     }),
   });
+
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`Gemini API ${res.status}: ${t}`);
+    console.error(`Gemini API error ${res.status}:`, t);
+    throw new Error(`Gemini API ${res.status}`);
   }
+
   const json = await res.json();
   const content = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+
   try {
     return JSON.parse(content);
-  } catch {
+  } catch (e) {
+    console.error("JSON parse error:", content);
     return { intent: "help" };
   }
 }

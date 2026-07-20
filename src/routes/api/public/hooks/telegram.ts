@@ -3,6 +3,49 @@ import { sendTelegramMessage, parseMessage, HELP, brl, todayISO } from "@/lib/te
 
 type Row = Record<string, any>;
 
+// Parse simples sem IA para comandos basicos
+function simpleParse(text: string): Row {
+  const t = text.toLowerCase().trim();
+
+  // Consulta de saldo
+  if (/(quanto|saldo|total|resumo)/.test(t) && /(gastei|gasto|despesa|mes|semana)/.test(t)) {
+    return { intent: "query" };
+  }
+  if (/^(saldo|resumo|total)$/i.test(t)) {
+    return { intent: "query" };
+  }
+
+  // Padrao: "gastei X no Y" ou "paguei X de Y"
+  const match = t.match(/(gastei|paguei|pago|comprei|paguei)\s+(\d+(?:[.,]\d+)?)\s*(?:de\s+|no\s+|na\s+|para\s+)?(.+)?/i);
+  if (match) {
+    const amount = parseFloat(match[2].replace(",", "."));
+    return {
+      intent: "add",
+      type: "despesa",
+      amount,
+      description: match[3] || "Despesa",
+      category: null,
+      is_paid: true,
+    };
+  }
+
+  // Padrao: "recebi X de Y"
+  const matchReceita = t.match(/(recebi|ganhei|recebido)\s+(\d+(?:[.,]\d+)?)\s*(?:de\s+|do\s+|da\s+)?(.+)?/i);
+  if (matchReceita) {
+    const amount = parseFloat(matchReceita[2].replace(",", "."));
+    return {
+      intent: "add",
+      type: "receita",
+      amount,
+      description: matchReceita[3] || "Receita",
+      category: null,
+      is_paid: true,
+    };
+  }
+
+  return { intent: "help" };
+}
+
 export const Route = createFileRoute("/api/public/hooks/telegram")({
   server: {
     handlers: {
@@ -82,8 +125,8 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
           parsed = await parseMessage(text, categories);
         } catch (e) {
           console.error("parseMessage error", e);
-          await sendTelegramMessage(chatId, "😕 Tive um problema para entender agora. Tente novamente em instantes.");
-          return new Response("OK", { status: 200 });
+          // Fallback: tentar interpretar comandos simples sem IA
+          parsed = simpleParse(text);
         }
 
         if (parsed.intent === "query") {
