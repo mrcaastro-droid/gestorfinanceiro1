@@ -427,8 +427,9 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
             const label = session.type === "receita" ? "Receita" : "Despesa";
             const catTxt = session.categoryName ? `\n📂 ${session.categoryName}` : "";
             const accTxt = session.accountName ? `\n🏦 ${session.accountName}` : "";
+            const dateTxt = `\n📅 ${todayISO().split("-").reverse().join("/")}`;
             await sendAndClean(chatId, session,
-              `${emoji} *${label} registrada!*\n\n💵 ${brl(session.amount)}\n📝 ${session.description ?? "Sem descricao"}${catTxt}${accTxt}\n💳 ${selected.name}`,
+              `${emoji} *${label} registrada!*\n\n💵 ${brl(session.amount)}\n📝 ${session.description ?? "Sem descricao"}${catTxt}${accTxt}\n💳 ${selected.name}${dateTxt}`,
               userMessageId
             );
             sessions.delete(chatId);
@@ -575,8 +576,9 @@ async function finalizeTransaction(
   const label = session.type === "receita" ? "Receita" : "Despesa";
   const catTxt = session.categoryName ? `\n📂 ${session.categoryName}` : "";
   const accTxt = session.accountName ? `\n🏦 ${session.accountName}` : "";
+  const dateTxt = `\n📅 ${todayISO().split("-").reverse().join("/")}`;
   await sendAndClean(chatId, session,
-    `${emoji} *${label} registrada!*\n\n💵 ${brl(session.amount)}\n📝 ${session.description ?? "Sem descricao"}${catTxt}${accTxt}\n\n💡 _Cadastre formas de pagamento no app para informar o pagamento._`,
+    `${emoji} *${label} registrada!*\n\n💵 ${brl(session.amount)}\n📝 ${session.description ?? "Sem descricao"}${catTxt}${accTxt}\n\n💡 _Cadastre formas de pagamento no app para informar o pagamento._${dateTxt}`,
     userMessageId
   );
   sessions.delete(chatId);
