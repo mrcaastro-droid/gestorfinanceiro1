@@ -5,7 +5,7 @@ type Row = Record<string, any>;
 
 // ─── Sessão conversacional ──────────────────────────────────────────
 interface SessionState {
-  step: "category" | "subcategory" | "account" | "payment_method";
+  step: "category" | "subcategory" | "description" | "account" | "payment_method";
   type: "receita" | "despesa";
   amount: number;
   description: string | null;
@@ -119,6 +119,15 @@ async function askForAccount(chatId: string, session: SessionState) {
     return true;
   }
   return false;
+}
+
+async function askForDescription(chatId: string, session: SessionState) {
+  session.step = "description";
+  const current = session.description ?? "";
+  const example = current ? `\n_Exemplo: ${current}_` : "";
+  await sendAndClean(chatId, session,
+    `📝 *O que foi comprado/recebido?*${example}\n\n_Envie a descricao ou *pular* para manter: ${current || "sem descricao"}._`
+  );
 }
 
 async function askForPaymentMethod(chatId: string, session: SessionState, paymentMethods: Array<{ id: string; name: string }>) {
@@ -280,13 +289,8 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
               return new Response("OK", { status: 200 });
             }
 
-            // Sem subcategorias → ir para conta
-            const hasAccount = await askForAccount(chatId, session);
-            if (!hasAccount) {
-              // Sem contas cadastradas → salvar direto
-              await finalizeTransaction(chatId, sb, USER_ID, session);
-              sessions.delete(chatId);
-            }
+            // Sem subcategorias → ir para descricao
+            await askForDescription(chatId, session);
             return new Response("OK", { status: 200 });
           }
 
@@ -294,11 +298,7 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
           if (session.step === "subcategory") {
             if (/^(pular|skip|proxim[ao])$/i.test(text)) {
               session.categoryId = session.categoryId; // mantem
-              const hasAccount = await askForAccount(chatId, session);
-              if (!hasAccount) {
-                await finalizeTransaction(chatId, sb, USER_ID, session);
-                sessions.delete(chatId);
-              }
+              await askForDescription(chatId, session);
               return new Response("OK", { status: 200 });
             }
 
@@ -312,6 +312,19 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
             const selected = session.subcategories[idx];
             session.categoryId = selected.id;
             session.categoryName = selected.name;
+
+            // Ir para descricao
+            await askForDescription(chatId, session);
+            return new Response("OK", { status: 200 });
+          }
+
+          // ── Passo: Descricao ─────────────────────────────────
+          if (session.step === "description") {
+            if (/^(pular|skip|proxim[ao])$/i.test(text)) {
+              // Manter descricao atual
+            } else if (text.length > 0) {
+              session.description = text;
+            }
 
             // Ir para conta
             const hasAccount = await askForAccount(chatId, session);
