@@ -8,13 +8,39 @@ export function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export async function sendTelegramMessage(chatId: string, text: string) {
+export async function sendTelegramMessage(chatId: string, text: string): Promise<number | null> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error("TELEGRAM_BOT_TOKEN ausente");
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: Number(chatId), text, parse_mode: "Markdown" }),
+  });
+  if (!res.ok) {
+    console.error(`Telegram send failed [${res.status}]`);
+    return null;
+  }
+  const data = await res.json();
+  return data?.result?.message_id ?? null;
+}
+
+export async function deleteTelegramMessage(chatId: string, messageId: number): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  await fetch(`https://api.telegram.org/bot${token}/deleteMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: Number(chatId), message_id: messageId }),
+  });
+}
+
+export async function editTelegramMessage(chatId: string, messageId: number, text: string): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: Number(chatId), message_id: messageId, text, parse_mode: "Markdown" }),
   });
 }
 

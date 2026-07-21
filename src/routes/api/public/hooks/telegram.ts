@@ -1,21 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { sendTelegramMessage, parseMessage, HELP, brl, todayISO } from "@/lib/telegram";
+import { sendTelegramMessage, deleteTelegramMessage, parseMessage, HELP, brl, todayISO } from "@/lib/telegram";
 
 type Row = Record<string, any>;
 
 // ─── Sessão conversacional ──────────────────────────────────────────
 interface SessionState {
-  step: "category" | "subcategory" | "payment_method";
+  step: "category" | "subcategory" | "account" | "payment_method";
   type: "receita" | "despesa";
   amount: number;
   description: string | null;
   is_paid: boolean;
   categoryId: string | null;
   categoryName: string | null;
+  accountId: string | null;
+  accountName: string | null;
   categories: Array<{ id: string; name: string }>;
   subcategories: Array<{ id: string; name: string }>;
+  accounts: Array<{ id: string; name: string }>;
   paymentMethods: Array<{ id: string; name: string }>;
   startedAt: number;
+  lastBotMessageId: number | null;
 }
 
 const SESSION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos
@@ -105,6 +109,44 @@ function parseSelection(text: string, items: Array<{ name: string }>): number | 
   return idx >= 0 ? idx : null;
 }
 
+async function askForAccount(chatId: string, session: SessionState) {
+  session.step = "account";
+  if (session.accounts.length > 0) {
+    const list = formatNumberedList(session.accounts, "🏦");
+    await sendAndClean(chatId, session,
+      `🏦 *Qual conta?*\n\n${list}\n\n_Envie o numero ou nome, ou *pular* para gravar sem conta._`
+    );
+    return true;
+  }
+  return false;
+}
+
+async function askForPaymentMethod(chatId: string, session: SessionState, paymentMethods: Array<{ id: string; name: string }>) {
+  session.step = "payment_method";
+  if (paymentMethods.length > 0) {
+    session.paymentMethods = paymentMethods;
+    const list = formatNumberedList(paymentMethods, "💳");
+    await sendAndClean(chatId, session,
+      `💳 *Forma de pagamento:*\n\n${list}\n\n_Envie o numero ou nome._`
+    );
+    return true;
+  }
+  return false;
+}
+
+async function sendAndClean(chatId: string, session: SessionState, text: string): Promise<void> {
+  // Deletar mensagem anterior do bot
+  if (session.lastBotMessageId) {
+    await deleteTelegramMessage(chatId, session.lastBotMessageId);
+    session.lastBotMessageId = null;
+  }
+  // Enviar nova mensagem e salvar o ID
+  const msgId = await sendTelegramMessage(chatId, text);
+  if (msgId) {
+    session.lastBotMessageId = msgId;
+  }
+}
+
 // ─── Rotas ──────────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/api/public/hooks/telegram")({
@@ -150,8 +192,11 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
         // ── Cancelar fluxo ─────────────────────────────────────
         if (/^(cancelar|cancel|voltar|sair)$/i.test(text)) {
           if (getSession(chatId)) {
+            const session = getSession(chatId);
+            if (session) {
+              await sendAndClean(chatId, session, "❌ Fluxo cancelado.");
+            }
             clearSession(chatId);
-            await sendTelegramMessage(chatId, "❌ Fluxo cancelado.");
           }
           return new Response("OK", { status: 200 });
         }
@@ -200,6 +245,12 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
           .eq("user_id", USER_ID);
         const paymentMethods = (pms ?? []) as Array<{ id: string; name: string }>;
 
+        const { data: accs } = await (sb.from("accounts") as Row)
+          .select("id, name")
+          .eq("user_id", USER_ID)
+          .eq("archived", false);
+        const accounts = (accs ?? []) as Array<{ id: string; name: string }>;
+
         // ── Fluxo conversacional ativo ──────────────────────────
         const session = getSession(chatId);
 
@@ -208,7 +259,7 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
           if (session.step === "category") {
             const idx = parseSelection(text, session.categories);
             if (idx === null) {
-              await sendTelegramMessage(chatId,
+              await sendAndClean(chatId, session,
                 `❌ Opcao invalida. Escolha um numero de 1 a ${session.categories.length} ou digite o nome.\n\nEnvie *cancelar* para sair.`
               );
               return new Response("OK", { status: 200 });
@@ -223,22 +274,16 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
               session.step = "subcategory";
               session.subcategories = subs;
               const list = formatNumberedList(subs, "📁");
-              await sendTelegramMessage(chatId,
+              await sendAndClean(chatId, session,
                 `📂 *Subcategoria de ${selected.name}:*\n\n${list}\n\n_Envie o numero ou nome, ou *pular* para gravar sem subcategoria._`
               );
               return new Response("OK", { status: 200 });
             }
 
-            // Sem subcategorias → ir para pagamento
-            session.step = "payment_method";
-            if (paymentMethods.length > 0) {
-              session.paymentMethods = paymentMethods;
-              const list = formatNumberedList(paymentMethods, "💳");
-              await sendTelegramMessage(chatId,
-                `💳 *Forma de pagamento:*\n\n${list}\n\n_Envie o numero ou nome._`
-              );
-            } else {
-              // Sem formas de pagamento cadastradas → salvar direto
+            // Sem subcategorias → ir para conta
+            const hasAccount = await askForAccount(chatId, session);
+            if (!hasAccount) {
+              // Sem contas cadastradas → salvar direto
               await finalizeTransaction(chatId, sb, USER_ID, session);
               sessions.delete(chatId);
             }
@@ -249,14 +294,8 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
           if (session.step === "subcategory") {
             if (/^(pular|skip|proxim[ao])$/i.test(text)) {
               session.categoryId = session.categoryId; // mantem
-              session.step = "payment_method";
-              if (paymentMethods.length > 0) {
-                session.paymentMethods = paymentMethods;
-                const list = formatNumberedList(paymentMethods, "💳");
-                await sendTelegramMessage(chatId,
-                  `💳 *Forma de pagamento:*\n\n${list}\n\n_Envie o numero ou nome._`
-                );
-              } else {
+              const hasAccount = await askForAccount(chatId, session);
+              if (!hasAccount) {
                 await finalizeTransaction(chatId, sb, USER_ID, session);
                 sessions.delete(chatId);
               }
@@ -265,7 +304,7 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
 
             const idx = parseSelection(text, session.subcategories);
             if (idx === null) {
-              await sendTelegramMessage(chatId,
+              await sendAndClean(chatId, session,
                 `❌ Opcao invalida. Escolha um numero de 1 a ${session.subcategories.length} ou digite o nome.\n\nEnvie *pular* para sem subcategoria ou *cancelar* para sair.`
               );
               return new Response("OK", { status: 200 });
@@ -274,15 +313,42 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
             session.categoryId = selected.id;
             session.categoryName = selected.name;
 
-            // Ir para pagamento
-            session.step = "payment_method";
-            if (paymentMethods.length > 0) {
-              session.paymentMethods = paymentMethods;
-              const list = formatNumberedList(paymentMethods, "💳");
-              await sendTelegramMessage(chatId,
-                `💳 *Forma de pagamento:*\n\n${list}\n\n_Envie o numero ou nome._`
+            // Ir para conta
+            const hasAccount = await askForAccount(chatId, session);
+            if (!hasAccount) {
+              await finalizeTransaction(chatId, sb, USER_ID, session);
+              sessions.delete(chatId);
+            }
+            return new Response("OK", { status: 200 });
+          }
+
+          // ── Passo: Conta ─────────────────────────────────────
+          if (session.step === "account") {
+            if (/^(pular|skip|proxim[ao])$/i.test(text)) {
+              session.accountId = null;
+              session.accountName = null;
+              const hasPayment = await askForPaymentMethod(chatId, session, paymentMethods);
+              if (!hasPayment) {
+                await finalizeTransaction(chatId, sb, USER_ID, session);
+                sessions.delete(chatId);
+              }
+              return new Response("OK", { status: 200 });
+            }
+
+            const idx = parseSelection(text, session.accounts);
+            if (idx === null) {
+              await sendAndClean(chatId, session,
+                `❌ Opcao invalida. Escolha um numero de 1 a ${session.accounts.length} ou digite o nome.\n\nEnvie *pular* para sem conta ou *cancelar* para sair.`
               );
-            } else {
+              return new Response("OK", { status: 200 });
+            }
+            const selected = session.accounts[idx];
+            session.accountId = selected.id;
+            session.accountName = selected.name;
+
+            // Ir para pagamento
+            const hasPayment = await askForPaymentMethod(chatId, session, paymentMethods);
+            if (!hasPayment) {
               await finalizeTransaction(chatId, sb, USER_ID, session);
               sessions.delete(chatId);
             }
@@ -293,7 +359,7 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
           if (session.step === "payment_method") {
             const idx = parseSelection(text, session.paymentMethods);
             if (idx === null) {
-              await sendTelegramMessage(chatId,
+              await sendAndClean(chatId, session,
                 `❌ Opcao invalida. Escolha um numero de 1 a ${session.paymentMethods.length} ou digite o nome.\n\nEnvie *cancelar* para sair.`
               );
               return new Response("OK", { status: 200 });
@@ -308,6 +374,7 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
               date: todayISO(),
               description: session.description,
               category_id: session.categoryId,
+              account_id: session.accountId,
               payment_method_id: selected.id,
               is_paid: session.is_paid,
             });
@@ -316,9 +383,9 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
               console.error("insert transaction error", error);
               const errMsg = String(error?.message ?? error?.details ?? error?.hint ?? "").toLowerCase();
               if (errMsg.includes("mes_bloqueado") || errMsg.includes("bloqueado")) {
-                await sendTelegramMessage(chatId, "🔒 O mes esta bloqueado para alteracoes. Abra o app e destrave o mes para registrar lancamentos.");
+                await sendAndClean(chatId, session, "🔒 O mes esta bloqueado para alteracoes. Abra o app e destrave o mes para registrar lancamentos.");
               } else {
-                await sendTelegramMessage(chatId, "😕 Nao consegui salvar o lancamento. Tente novamente.");
+                await sendAndClean(chatId, session, "😕 Nao consegui salvar o lancamento. Tente novamente.");
               }
               sessions.delete(chatId);
               return new Response("OK", { status: 200 });
@@ -327,8 +394,9 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
             const emoji = session.type === "receita" ? "🟢" : "🔴";
             const label = session.type === "receita" ? "Receita" : "Despesa";
             const catTxt = session.categoryName ? `\n📂 ${session.categoryName}` : "";
-            await sendTelegramMessage(chatId,
-              `${emoji} *${label} registrada!*\n\n💵 ${brl(session.amount)}\n📝 ${session.description ?? "Sem descricao"}${catTxt}\n💳 ${selected.name}`
+            const accTxt = session.accountName ? `\n🏦 ${session.accountName}` : "";
+            await sendAndClean(chatId, session,
+              `${emoji} *${label} registrada!*\n\n💵 ${brl(session.amount)}\n📝 ${session.description ?? "Sem descricao"}${catTxt}${accTxt}\n💳 ${selected.name}`
             );
             sessions.delete(chatId);
             return new Response("OK", { status: 200 });
@@ -383,6 +451,7 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
               date: todayISO(),
               description: parsed.description ?? null,
               category_id: null,
+              account_id: null,
               payment_method_id: null,
               is_paid: parsed.is_paid !== false,
             });
@@ -408,16 +477,20 @@ export const Route = createFileRoute("/api/public/hooks/telegram")({
             is_paid: parsed.is_paid !== false,
             categoryId: null,
             categoryName: null,
+            accountId: null,
+            accountName: null,
             categories: rootCats,
             subcategories: [],
+            accounts: accounts,
             paymentMethods: paymentMethods,
             startedAt: Date.now(),
+            lastBotMessageId: null,
           };
           sessions.set(chatId, sessionState);
 
           const emoji = txType === "receita" ? "🟢" : "🔴";
           const list = formatNumberedList(rootCats, "📂");
-          await sendTelegramMessage(chatId,
+          await sendAndClean(chatId, sessionState,
             `${emoji} *${brl(Number(parsed.amount))}* - ${parsed.description ?? "Sem descricao"}\n\n📂 *Qual categoria?*\n\n${list}\n\n_Envie o numero ou nome da categoria._`
           );
           return new Response("OK", { status: 200 });
@@ -445,6 +518,7 @@ async function finalizeTransaction(
     date: todayISO(),
     description: session.description,
     category_id: session.categoryId,
+    account_id: session.accountId,
     payment_method_id: null,
     is_paid: session.is_paid,
   });
@@ -453,9 +527,9 @@ async function finalizeTransaction(
     console.error("insert transaction error", error);
     const errMsg = String(error?.message ?? error?.details ?? error?.hint ?? "").toLowerCase();
     if (errMsg.includes("mes_bloqueado") || errMsg.includes("bloqueado")) {
-      await sendTelegramMessage(chatId, "🔒 O mes esta bloqueado para alteracoes. Abra o app e destrave o mes para registrar lancamentos.");
+      await sendAndClean(chatId, session, "🔒 O mes esta bloqueado para alteracoes. Abra o app e destrave o mes para registrar lancamentos.");
     } else {
-      await sendTelegramMessage(chatId, "😕 Nao consegui salvar o lancamento. Tente novamente.");
+      await sendAndClean(chatId, session, "😕 Nao consegui salvar o lancamento. Tente novamente.");
     }
     sessions.delete(chatId);
     return;
@@ -464,8 +538,9 @@ async function finalizeTransaction(
   const emoji = session.type === "receita" ? "🟢" : "🔴";
   const label = session.type === "receita" ? "Receita" : "Despesa";
   const catTxt = session.categoryName ? `\n📂 ${session.categoryName}` : "";
-  await sendTelegramMessage(chatId,
-    `${emoji} *${label} registrada!*\n\n💵 ${brl(session.amount)}\n📝 ${session.description ?? "Sem descricao"}${catTxt}\n\n💡 _Cadastre formas de pagamento no app para informar o pagamento._`
+  const accTxt = session.accountName ? `\n🏦 ${session.accountName}` : "";
+  await sendAndClean(chatId, session,
+    `${emoji} *${label} registrada!*\n\n💵 ${brl(session.amount)}\n📝 ${session.description ?? "Sem descricao"}${catTxt}${accTxt}\n\n💡 _Cadastre formas de pagamento no app para informar o pagamento._`
   );
   sessions.delete(chatId);
 }
